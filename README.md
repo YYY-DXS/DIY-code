@@ -26,6 +26,4 @@ git pull
 git push
 ```
 
-工作区放在本机的 `C:\Users\<user>\Desktop\codex\2026-09-27\github\DIY-`。
-
-不想敲命令的话，用 `tools\github\同步仓库.cmd`，双击即可拉取并上传。
+不想敲命令的话，双击 `tools\同步仓库.cmd`，它会自动拉取最新、提交本地改动并推送。
