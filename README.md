@@ -11,10 +11,8 @@
 
 | 目录 | 说明 |
 | --- | --- |
-| `projects/` | 各个 DIY 项目的资料 |
-| `tools/` | 配套工具和脚本 |
-
-（内容还在陆续整理）
+| [`projects/`](projects/README.md) | 各个 DIY 项目的资料（齐柏林飞艇、外骨骼、台历、航模方向） |
+| [`tools/`](tools/README.md) | 配套工具：DeepSeek 记录同步、Git 同步脚本 |
 
 ## 同步方式
 
