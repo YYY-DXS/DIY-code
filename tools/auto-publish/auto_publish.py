@@ -261,7 +261,7 @@ def main() -> int:
     ap.add_argument("--kb", default=str(DEFAULT_KB))
     ap.add_argument("--repo", default=str(DEFAULT_REPO))
     ap.add_argument("--keys", default=str(DEFAULT_KEYS))
-    ap.add_argument("--min-score", type=int, default=3)
+    ap.add_argument("--min-score", type=int, default=6)
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--list", action="store_true")
     ap.add_argument("--exclude", help="把某个会话 ID 加入永不推送名单")
@@ -370,14 +370,16 @@ def main() -> int:
 
     # 更新索引：保留已有条目
     entries = []
+    seen_dirs = set()
     for cid, title in published.items():
         folder = safe_name(title)
-        if (projects_dir / folder).exists():
+        if (projects_dir / folder).exists() and folder not in seen_dirs:
             entries.append({"title": title, "dir": folder, "source": "人工整理", "status": "进行中"})
-    seen = {e["dir"] for e in entries}
+            seen_dirs.add(folder)
     for item in added:
-        if item["dir"] not in seen:
+        if item["dir"] not in seen_dirs:
             entries.append(item)
+            seen_dirs.add(item["dir"])
     update_index(repo, entries)
 
     # 提交并推送
