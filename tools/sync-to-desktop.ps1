@@ -23,11 +23,19 @@ Write-Host "从 $source" -ForegroundColor Cyan
 Write-Host "到 $dest" -ForegroundColor Cyan
 Write-Host ""
 
-robocopy $source $dest /E /XF .gitkeep /XF README.md /NFL /NDL /NJH /NJS /NP | Out-Null
+# 注意 1：不能用 /XF README.md —— 子目录里的 README.md 是有用内容
+# 注意 2：必须限制重试次数，否则遇到打不开的文件会无限重试（看起来像卡死）
+robocopy $source $dest /E /XF .gitkeep /R:2 /W:2 /NFL /NDL /NJH /NJS /NP | Out-Null
 Copy-Item -LiteralPath (Join-Path $source 'README.md') -Destination (Join-Path $dest '项目索引.md') -Force
+foreach ($ext in @('html', 'docx')) {
+    $from = Join-Path $source "README.$ext"
+    if (Test-Path -LiteralPath $from) {
+        Copy-Item -LiteralPath $from -Destination (Join-Path $dest "项目索引.$ext") -Force
+    }
+}
 
-# 清掉早期同步留下的两个多余文件（只动这两个，别的不碰）
-foreach ($stale in @('README.md', '.gitkeep')) {
+# 清掉根目录下多余的文件（只动这几个，别的不碰）
+foreach ($stale in @('README.md', 'README.html', 'README.docx', '.gitkeep')) {
     $path = Join-Path $dest $stale
     if (Test-Path -LiteralPath $path) { Remove-Item -LiteralPath $path -ErrorAction SilentlyContinue }
 }
