@@ -23,8 +23,14 @@ Write-Host "从 $source" -ForegroundColor Cyan
 Write-Host "到 $dest" -ForegroundColor Cyan
 Write-Host ""
 
-robocopy $source $dest /E /NFL /NDL /NJH /NJS /NP | Out-Null
+robocopy $source $dest /E /XF .gitkeep /XF README.md /NFL /NDL /NJH /NJS /NP | Out-Null
 Copy-Item -LiteralPath (Join-Path $source 'README.md') -Destination (Join-Path $dest '项目索引.md') -Force
+
+# 清掉早期同步留下的两个多余文件（只动这两个，别的不碰）
+foreach ($stale in @('README.md', '.gitkeep')) {
+    $path = Join-Path $dest $stale
+    if (Test-Path -LiteralPath $path) { Remove-Item -LiteralPath $path -ErrorAction SilentlyContinue }
+}
 
 $count = (Get-ChildItem -LiteralPath $dest -Recurse -File | Measure-Object).Count
 Write-Host "同步完成，目标文件夹现在有 $count 个文件。" -ForegroundColor Green
