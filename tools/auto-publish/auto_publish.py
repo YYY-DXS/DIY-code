@@ -53,14 +53,18 @@ PLAN_MARKERS = [
     "参数", "尺寸", "工艺流程", "时间规划", "物料",
 ]
 
-# 已经人工整理过的，不再重复推送
-SEED_PUBLISHED = {
-    "00000000-0000-0000-0000-000000000000": "齐柏林飞艇模型",
-    "00000000-0000-0000-0000-000000000000": "外骨骼",
-    "00000000-0000-0000-0000-000000000000": "外骨骼",
-    "00000000-0000-0000-0000-000000000000": "马年台历",
-    "00000000-0000-0000-0000-000000000000": "航空模型",
-}
+# 已经人工整理过的会话清单放在本地文件里，不写进仓库，
+# 免得把你真实的会话编号公开出去。
+SEED_FILE = Path(__file__).resolve().parent / "seed_published.json"
+
+
+def load_seeds() -> dict:
+    if SEED_FILE.exists():
+        try:
+            return json.loads(SEED_FILE.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            return {}
+    return {}
 
 
 # ---------------------------------------------------------------- 工具
@@ -277,7 +281,7 @@ def main() -> int:
     keys = Path(args.keys)
     state_path = Path(__file__).resolve().parent / "state.json"
     state = load_json(state_path, {"published": {}, "candidates": {}})
-    published = dict(SEED_PUBLISHED)
+    published = load_seeds()
     published.update(state.get("published", {}))
     blocked = set(state.get("blocked", []))
 

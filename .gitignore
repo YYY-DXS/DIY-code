@@ -6,3 +6,4 @@
 *.docx
 *.html
 tools/auto-publish/state.json
+tools/auto-publish/seed_published.json
