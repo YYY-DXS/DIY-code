@@ -1,3 +1,8 @@
 # 排版检查用的截图
 .preview/
 *.log
+
+# 只在本机生成 / 只在本机使用，不上传到 GitHub
+*.docx
+*.html
+tools/auto-publish/state.json
