@@ -1,0 +1,10 @@
+{
+    "autodeskProduct": "Fusion",
+    "type": "script",
+    "author": "Codex",
+    "description": {
+        "": "1:1000 齐柏林飞艇 LZ127 —— 参数化生成艇体与 16 道隔框环"
+    },
+    "supportedOS": "windows|mac",
+    "editEnabled": true
+}
