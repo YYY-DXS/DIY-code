@@ -386,6 +386,24 @@ def main() -> int:
     stamp = datetime.now().strftime("%Y-%m-%d %H:%M")
     run_git(repo, env, "pull", "--ff-only")
     run_git(repo, env, "add", "-A")
+
+    # 提交前先过一遍隐私检查，避免把私人内容推到公开仓库
+    checker = repo / "tools" / "security" / "privacy_check.py"
+    if checker.exists():
+        print("隐私检查：")
+        proc = subprocess.run(
+            [sys.executable, str(checker)],
+            cwd=repo,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+        )
+        print("  " + (proc.stdout or "").strip().replace("\n", "\n  "))
+        if proc.returncode != 0:
+            print("\n隐私检查没通过，已中止自动推送。请先处理上面的问题。")
+            return 1
+
     code, out = run_git(repo, env, "commit", "-m", f"自动收录 {len(added)} 个新项目（{stamp}）")
     print(out.strip().splitlines()[0] if out.strip() else "")
     code, out = run_git(repo, env, "push")

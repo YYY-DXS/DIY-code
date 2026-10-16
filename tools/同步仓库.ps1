@@ -26,22 +26,44 @@ if (Test-Path -LiteralPath $key) {
 
 Set-Location $repoRoot
 
-Write-Host "1/3 拉取远端更新" -ForegroundColor Cyan
+Write-Host "1/4 拉取远端更新" -ForegroundColor Cyan
 git pull --ff-only 2>&1 | ForEach-Object { Write-Host "  $_" }
 
-Write-Host "2/3 检查本地改动" -ForegroundColor Cyan
+Write-Host "2/4 检查本地改动" -ForegroundColor Cyan
 git add -A
 $staged = git diff --cached --name-only
 if ($staged) {
     if (-not $Message) { $Message = "同步 " + (Get-Date -Format 'yyyy-MM-dd HH:mm') }
     Write-Host "  发现 $($staged.Count) 个文件有改动："
     $staged | Select-Object -First 10 | ForEach-Object { Write-Host "    $_" }
-    git commit -m $Message 2>&1 | Select-Object -First 2 | ForEach-Object { Write-Host "  $_" }
 } else {
     Write-Host "  没有需要提交的改动"
 }
 
-Write-Host "3/3 推送到 GitHub" -ForegroundColor Cyan
+Write-Host "3/4 隐私检查" -ForegroundColor Cyan
+$py = Join-Path $env:USERPROFILE '.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe'
+if (-not (Test-Path -LiteralPath $py)) { $py = 'python' }
+$checker = Join-Path $repoRoot 'tools\security\privacy_check.py'
+if (Test-Path -LiteralPath $checker) {
+    $env:PYTHONIOENCODING = 'utf-8'
+    & $py $checker
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host ""
+        Write-Host "隐私检查没通过，已中止。把上面列出的内容处理掉再同步。" -ForegroundColor Red
+        Write-Host "（确认要上传就手动 git commit 后 git push，检查只拦这个自动流程）" -ForegroundColor DarkGray
+        Write-Host ""
+        Read-Host "按回车关闭"
+        exit 1
+    }
+} else {
+    Write-Host "  找不到检查脚本，跳过。" -ForegroundColor Yellow
+}
+
+if ($staged) {
+    git commit -m $Message 2>&1 | Select-Object -First 2 | ForEach-Object { Write-Host "  $_" }
+}
+
+Write-Host "4/4 推送到 GitHub" -ForegroundColor Cyan
 git push 2>&1 | ForEach-Object { Write-Host "  $_" }
 
 if ($LASTEXITCODE -eq 0) {

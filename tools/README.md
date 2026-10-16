@@ -31,6 +31,25 @@
 | `同步到桌面.cmd` | 把项目文档复制到桌面的「DIY项目」文件夹 |
 | `auto-publish/` | 自动发现新项目、生成文档并推送 |
 | `md2readable/` | 把 Markdown 转成 HTML 和 DOCX 两种易读格式 |
+| `security/` | 推送前的隐私检查：密钥、手机号、本机用户名、健康描述等 |
+
+## 推送前的隐私检查
+
+`tools/security/privacy_check.py` 会扫出不该公开的内容，发现阻断项就中止推送。
+它已经接进两条自动流程：
+
+- `同步仓库.cmd` —— 提交前自动检查
+- `tools/auto-publish/` —— 自动收录新项目时先检查
+
+手动检查全部文件：
+
+```bash
+python tools/security/privacy_check.py --all
+```
+
+检查项分两级：**阻断**（API 密钥、令牌、私钥、手机号、身份证、银行卡、
+本机用户名路径、身体状况描述、情感话题、聊天记录链接、Word/HTML 等不该上传的文件）
+和**提醒**（邮箱、会话 ID、翻墙相关词，只提示不阻止）。
 
 ## 其他
 

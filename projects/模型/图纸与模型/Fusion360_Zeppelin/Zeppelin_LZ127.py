@@ -21,6 +21,7 @@
 
 import math
 import traceback
+from pathlib import Path
 
 import adsk.core
 import adsk.fusion
@@ -39,8 +40,9 @@ MAKE_FRAMES = True          # 生成隔框环
 FRAME_W = 0.6               # 隔框轴向宽度 mm
 FRAME_T = 0.4               # 隔框径向厚度 mm
 
-EXPORT_STL = False          # 改成 True 并把下面路径换成你自己的目录
-STL_DIR = "C:/Users/<user>/Desktop/DIY_stl"
+EXPORT_STL = False          # 改成 True 就会把 STL 导出到下面这个目录
+# 默认放桌面下的 DIY_stl，不用写死别人的用户名
+STL_DIR = str(Path.home() / "Desktop" / "DIY_stl")
 
 # 隔框站位：实机隔框间距 15 m，换算到 1:1000 后位于 z = 15, 30, ..., 225 mm
 RING_PITCH_M = 15.0
