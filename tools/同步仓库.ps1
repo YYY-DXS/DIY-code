@@ -40,17 +40,16 @@ if ($staged) {
     Write-Host "  没有需要提交的改动"
 }
 
-Write-Host "3/4 隐私检查" -ForegroundColor Cyan
+Write-Host "3/4 隐私检查与自动脱敏" -ForegroundColor Cyan
 $py = Join-Path $env:USERPROFILE '.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe'
 if (-not (Test-Path -LiteralPath $py)) { $py = 'python' }
 $checker = Join-Path $repoRoot 'tools\security\privacy_check.py'
 if (Test-Path -LiteralPath $checker) {
     $env:PYTHONIOENCODING = 'utf-8'
-    & $py $checker
+    & $py $checker --auto
     if ($LASTEXITCODE -ne 0) {
         Write-Host ""
-        Write-Host "隐私检查没通过，已中止。把上面列出的内容处理掉再同步。" -ForegroundColor Red
-        Write-Host "（确认要上传就手动 git commit 后 git push，检查只拦这个自动流程）" -ForegroundColor DarkGray
+        Write-Host "自动脱敏后仍有问题，已中止同步。按上面提示处理后再来。" -ForegroundColor Red
         Write-Host ""
         Read-Host "按回车关闭"
         exit 1

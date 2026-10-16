@@ -31,25 +31,42 @@
 | `同步到桌面.cmd` | 把项目文档复制到桌面的「DIY项目」文件夹 |
 | `auto-publish/` | 自动发现新项目、生成文档并推送 |
 | `md2readable/` | 把 Markdown 转成 HTML 和 DOCX 两种易读格式 |
-| `security/` | 推送前的隐私检查：密钥、手机号、本机用户名、健康描述等 |
+| `security/` | 推送前的隐私检查与**自动脱敏**：密钥、手机号、本机用户名、健康描述等 |
 
-## 推送前的隐私检查
+## 推送前的隐私检查与自动脱敏
 
-`tools/security/privacy_check.py` 会扫出不该公开的内容，发现阻断项就中止推送。
-它已经接进两条自动流程：
+`tools/security/privacy_check.py` 在提交前扫一遍，**能改的直接改，改不掉的不提交**。
+已经接进两条自动流程，你不需要手动跑：
 
-- `同步仓库.cmd` —— 提交前自动检查
-- `tools/auto-publish/` —— 自动收录新项目时先检查
+- `同步仓库.cmd` —— 提交前自动处理
+- `tools/auto-publish/` —— 自动收录新项目时先处理
 
-手动检查全部文件：
+处理规则：
+
+| 内容 | 处理方式 |
+| --- | --- |
+| API 密钥、令牌、私钥、Bearer | 替换成 `***已移除***` |
+| 手机号、身份证号、银行卡号 | 替换成 `[已隐藏]` |
+| 本机用户名路径 | 替换成 `C:\Users\<用户>` |
+| 会话链接、会话编号 | 链接改成 `***`，编号改成全 0 |
+| 邮箱（非 GitHub/Gitee 的） | 替换成 `[邮箱已隐藏]` |
+| 健康状况、情感话题这类整段文字 | **整个文件撤出本次提交**（本地保留，不上传） |
+| `.docx` / `.html` / `state.json` 等不该上传的文件 | 直接不提交 |
+
+改动前会把原文件备份到 `tools/security/backup/`，每次处理都记进
+`tools/security/fix-log.txt`，两个都在 .gitignore 里。
+
+三种用法：
 
 ```bash
-python tools/security/privacy_check.py --all
+python tools/security/privacy_check.py --check   # 只看不改
+python tools/security/privacy_check.py --fix     # 就地脱敏
+python tools/security/privacy_check.py --auto    # 全自动（推送流程用的就是这个）
+python tools/security/privacy_check.py --check --all   # 检查全部跟踪文件
 ```
 
-检查项分两级：**阻断**（API 密钥、令牌、私钥、手机号、身份证、银行卡、
-本机用户名路径、身体状况描述、情感话题、聊天记录链接、Word/HTML 等不该上传的文件）
-和**提醒**（邮箱、会话 ID、翻墙相关词，只提示不阻止）。
+还剩一类**提醒项**（不阻止提交）：普通邮箱、会话编号、翻墙相关词 —— 这些会打印出来
+让你知道，但不会拦。
 
 ## 其他
 

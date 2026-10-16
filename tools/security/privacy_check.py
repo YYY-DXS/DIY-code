@@ -1,43 +1,48 @@
 #!/usr/bin/env python3
-"""推送前的隐私检查：扫出不该公开的内容，有问题就中止提交。
+"""推送前的隐私检查与自动脱敏。
 
-用法:
-    python privacy_check.py              # 检查暂存区（提交前用）
-    python privacy_check.py --all        # 检查仓库里全部跟踪文件
-    python privacy_check.py --files a.md b.py
+三种模式：
+    python privacy_check.py --check   只检查（默认），发现问题返回 1
+    python privacy_check.py --fix     检查并就地脱敏，改不掉的仍然返回 1
+    python privacy_check.py --auto    全自动：能改的就改，改不掉的文件自动撤出提交
 
-退出码 0 = 通过，1 = 发现问题（调用方应中止提交/推送）。
+`--auto` 是给自动推送流程用的：先脱敏，再把含整段私人文字的文件撤出本次提交，
+最后重新检查一遍，全部干净才让提交继续。
 
-设计要点：用户名等敏感字符串从运行时环境读取，不写死在文件里，
-否则这个检查脚本自己就会成为泄露源。
+改动前会把原文件备份到 tools/security/backup/，日志写进 tools/security/fix-log.txt。
 """
 
 from __future__ import annotations
 
 import argparse
-import os
 import re
+import shutil
 import subprocess
 import sys
+from datetime import datetime
 from pathlib import Path
 
-# 中文 Windows 的控制台默认是 GBK，直接打印 ✓ / ⚠ 会崩，这里强制 UTF-8
+# 中文 Windows 控制台默认 GBK，直接打印 ✓ / ⚠ 会崩，强制 UTF-8
 try:
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 except (AttributeError, ValueError):
     pass
 
-# ---------------------------------------------------------------- 规则
+HERE = Path(__file__).resolve().parent
+BACKUP_ROOT = HERE / "backup"
+LOG_FILE = HERE / "fix-log.txt"
 
 USER = Path.home().name  # 运行时取，不写死
 
-# 危险文件名 / 扩展名：这些根本不该进仓库
-FORBIDDEN_EXT = {".docx", ".html", ".pem", ".key", ".pfx", ".zip", ".7z"}
-FORBIDDEN_NAMES = {"state.json", "token.txt", "id_rsa", "id_ed25519", "credentials"}
-FORBIDDEN_PARTS = {".ssh", ".keys", "node_modules", "__pycache__"}
+# ---------------------------------------------------------------- 规则
 
-# 邮箱白名单（Git 自带的假邮箱、示例邮箱不算泄露）
+BLOCK_EXT = {".docx", ".html", ".pem", ".key", ".pfx", ".zip", ".7z"}
+BLOCK_NAMES = {
+    "state.json", "token.txt", "seed_published.json", "id_rsa", "id_ed25519", "credentials",
+}
+BLOCK_PARTS = {".ssh", ".keys", "node_modules", "__pycache__"}
+
 EMAIL_OK = re.compile(
     r"(git@github\.com|git@gitee\.com|.*@users\.noreply\.github\.com"
     r"|.*@users\.noreply\.gitee\.com|.*@example\.(com|org)|.*@localhost"
@@ -50,30 +55,56 @@ PATTERNS: list[tuple[str, str, str]] = [
     ("API 密钥（sk-）", "block", r"sk-[A-Za-z0-9_\-]{16,}"),
     ("GitHub 令牌", "block", r"gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}"),
     ("云服务密钥", "block", r"AKIA[0-9A-Z]{16}|AIza[0-9A-Za-z_\-]{30,}"),
-    ("私钥文件内容", "block", r"-----BEGIN [A-Z ]*PRIVATE KEY-----"),
+    ("私钥内容", "block",
+     r"-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----"),
     ("Bearer 令牌", "block", r"[Bb]earer\s+[A-Za-z0-9\-_.]{20,}"),
     ("手机号", "block", r"(?<!\d)1[3-9]\d{9}(?!\d)"),
     ("身份证号", "block", r"(?<!\d)\d{17}[\dXx](?!\d)"),
     ("银行卡号", "block", r"(?<!\d)\d{16,19}(?!\d)"),
-    # 只认“引号包起来的、像密钥的值”，避免把 token = payload.get(...) 这类代码误判
     ("密码 / 密钥字段", "block",
      r"(?i)\b(password|passwd|pwd|secret|api[_-]?key|apikey|access[_-]?token)\b"
      r"\s*[:=]\s*[\"']([A-Za-z0-9+/=_\-.]{12,})[\"']"),
-    ("身体 / 健康描述", "block", r"腿瘸|右腿|左腿|残疾|行动不便|瘫痪"),
-    ("情感 / 心理话题", "block", r"情感困扰|心理问题|抑郁|焦虑症|自残"),
+    ("身体 / 健康描述", "prose", r"腿瘸|右腿|左腿|残疾|行动不便|瘫痪"),
+    ("情感 / 心理话题", "prose", r"情感困扰|心理问题|抑郁|焦虑症|自残"),
     ("聊天记录链接", "block", r"chat\.deepseek\.com/a/chat/s/[0-9a-fA-F\-]{8,}"),
     ("邮箱地址", "warn", r"[\w.\-+]+@[\w\-]+\.[A-Za-z]{2,}"),
     ("翻墙 / 网络工具", "warn", r"VPN|翻墙|梯子|机场订阅|节点订阅"),
     ("会话 ID", "warn", r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"),
 ]
 
-# 占位符：出现在示例代码里的假密码不算泄露
+# 可以机械替换的规则：规则名 → (匹配模式, 替换成什么)
+FIXERS: dict[str, tuple[str, str]] = {
+    "本机用户路径": (rf"[A-Za-z]:[\\/]Users[\\/]{re.escape(USER)}", r"C:\Users\<用户>"),
+    "API 密钥（sk-）": (r"sk-[A-Za-z0-9_\-]{16,}", "sk-***已移除***"),
+    "GitHub 令牌": (
+        r"gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}",
+        "***令牌已移除***",
+    ),
+    "云服务密钥": (r"AKIA[0-9A-Z]{16}|AIza[0-9A-Za-z_\-]{30,}", "***密钥已移除***"),
+    "私钥内容": (
+        r"-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----",
+        "***私钥内容已移除***",
+    ),
+    "Bearer 令牌": (r"[Bb]earer\s+[A-Za-z0-9\-_.]{20,}", "Bearer ***已移除***"),
+    "手机号": (r"(?<!\d)1[3-9]\d{9}(?!\d)", "[手机号已隐藏]"),
+    "身份证号": (r"(?<!\d)\d{17}[\dXx](?!\d)", "[身份证号已隐藏]"),
+    "银行卡号": (r"(?<!\d)\d{16,19}(?!\d)", "[银行卡号已隐藏]"),
+    "聊天记录链接": (
+        r"chat\.deepseek\.com/a/chat/s/[0-9a-fA-F\-]{8,}",
+        "chat.deepseek.com/a/chat/s/***",
+    ),
+    "会话 ID": (
+        r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}",
+        "00000000-0000-0000-0000-000000000000",
+    ),
+    "邮箱地址": (r"[\w.\-+]+@[\w\-]+\.[A-Za-z]{2,}", "[邮箱已隐藏]"),
+}
+
 PLACEHOLDER = re.compile(
-    r"你的|你的的|自己|替换|修改|示例|xxx|XXX|\*\*\*|your|YOUR|example|placeholder"
-    r"|changeme|TODO|<[^>]+>|\$\{|%s|%d|%v",
+    r"你的|自己|替换|修改|示例|xxx|XXX|\*\*\*|your|YOUR|example|placeholder"
+    r"|changeme|TODO|<[^>]+>|\$\{|%s|%d|%v|已隐藏|已移除"
 )
 
-# 这个检查脚本自身会包含规则字样，不扫自己
 SKIP_PATHS = {"tools/security/privacy_check.py"}
 
 TEXT_EXT = {
@@ -81,6 +112,9 @@ TEXT_EXT = {
     ".ps1", ".sh", ".yml", ".yaml", ".toml", ".ini", ".cfg", ".cpp", ".c", ".h",
     ".cs", ".java", ".csv", ".tsv", ".xml", ".manifest", ".gitignore", "",
 }
+
+
+# ---------------------------------------------------------------- 基础工具
 
 
 def git(*args: str) -> str:
@@ -92,7 +126,11 @@ def git(*args: str) -> str:
 
 
 def staged_files() -> list[str]:
-    return [f for f in git("diff", "--cached", "--name-only", "--diff-filter=ACMR").splitlines() if f]
+    return [
+        f
+        for f in git("diff", "--cached", "--name-only", "--diff-filter=ACMR").splitlines()
+        if f
+    ]
 
 
 def tracked_files() -> list[str]:
@@ -102,33 +140,44 @@ def tracked_files() -> list[str]:
 def read_text(path: Path) -> str | None:
     if path.suffix.lower() not in TEXT_EXT:
         return None
-    try:
-        return path.read_text(encoding="utf-8", errors="strict")
-    except (UnicodeDecodeError, OSError):
+    for encoding in ("utf-8", "gbk"):
         try:
-            return path.read_text(encoding="gbk", errors="ignore")
+            return path.read_text(encoding=encoding)
+        except (UnicodeDecodeError, LookupError):
+            continue
         except OSError:
             return None
+    return None
 
 
 def mask(text: str, keep: int = 4) -> str:
     text = text.strip()
-    if len(text) <= keep * 2:
-        return text[:keep] + "***"
-    return f"{text[:keep]}***{text[-2:]}"
+    return text[:keep] + "***" if len(text) > keep else "***"
 
 
 def luhn_ok(number: str) -> bool:
-    """银行卡号校验，用来过滤长数字的误报。"""
-    digits = [int(c) for c in number]
-    checksum = 0
-    for index, digit in enumerate(reversed(digits)):
+    total = 0
+    for index, char in enumerate(reversed(number)):
+        digit = int(char)
         if index % 2 == 1:
             digit *= 2
             if digit > 9:
                 digit -= 9
-        checksum += digit
-    return checksum % 10 == 0
+        total += digit
+    return total % 10 == 0
+
+
+def log(text: str) -> None:
+    stamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    try:
+        LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
+        with LOG_FILE.open("a", encoding="utf-8") as fh:
+            fh.write(f"[{stamp}] {text}\n")
+    except OSError:
+        pass
+
+
+# ---------------------------------------------------------------- 扫描
 
 
 def scan(paths: list[str]) -> list[tuple[str, int, str, str, str]]:
@@ -139,10 +188,10 @@ def scan(paths: list[str]) -> list[tuple[str, int, str, str, str]]:
             continue
         path = Path(rel)
         suffix = path.suffix.lower()
-        if suffix in FORBIDDEN_EXT:
+        if suffix in BLOCK_EXT:
             findings.append((rel, 0, "不该上传的文件类型", suffix, "block"))
             continue
-        if path.name in FORBIDDEN_NAMES or set(path.parts) & FORBIDDEN_PARTS:
+        if path.name in BLOCK_NAMES or set(path.parts) & BLOCK_PARTS:
             findings.append((rel, 0, "不该上传的文件名", path.name, "block"))
             continue
         text = read_text(path)
@@ -158,7 +207,6 @@ def scan(paths: list[str]) -> list[tuple[str, int, str, str, str]]:
                         continue
                     if label == "聊天记录链接":
                         tail = hit.rstrip("/").split("/")[-1]
-                        # 全是重复字符的 ID 是测试用的假数据
                         if len(set(tail.lower())) <= 2:
                             continue
                     if label == "密码 / 密钥字段":
@@ -170,11 +218,77 @@ def scan(paths: list[str]) -> list[tuple[str, int, str, str, str]]:
     return findings
 
 
+# ---------------------------------------------------------------- 脱敏
+
+
+def sanitize(path: Path) -> list[tuple[str, int]]:
+    """就地脱敏，返回 [(规则名, 替换次数)]"""
+    text = read_text(path)
+    if text is None:
+        return []
+    original = text
+    applied: list[tuple[str, int]] = []
+
+    # 替换文本里有反斜杠（比如 C:\Users），必须用函数替换，否则会被当成正则转义
+    def literal(value: str):
+        return lambda _match: value
+
+    for label, (pattern, replacement) in FIXERS.items():
+        if label == "邮箱地址":
+            text, count = re.subn(
+                pattern,
+                lambda m: m.group(0) if EMAIL_OK.match(m.group(0)) else replacement,
+                text,
+            )
+        elif label == "密码 / 密钥字段":
+            def repl(match):
+                value = match.group(2)
+                if not value or PLACEHOLDER.search(value):
+                    return match.group(0)
+                return match.group(0).replace(value, "***已移除***")
+
+            text, count = re.subn(PATTERNS[9][2], repl, text)
+        else:
+            text, count = re.subn(pattern, literal(replacement), text)
+        if count:
+            applied.append((label, count))
+
+    if text != original:
+        stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        backup = BACKUP_ROOT / stamp / path.name
+        backup.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(path, backup)
+        path.write_text(text, encoding="utf-8")
+    return applied
+
+
+def dump(items: list[tuple[str, int, str, str, str]], title: str) -> None:
+    if not items:
+        return
+    print(f"\n{title}（{len(items)} 处）")
+    seen: set[tuple[str, str]] = set()
+    for rel, line_no, label, snippet, _level in items:
+        if (rel, label) in seen:
+            continue
+        seen.add((rel, label))
+        where = f"第 {line_no} 行" if line_no else "整个文件"
+        print(f"  ● {rel}（{where}）")
+        print(f"      {label}：{snippet}")
+
+
+# ---------------------------------------------------------------- 主流程
+
+
 def main() -> int:
-    ap = argparse.ArgumentParser(description="推送前隐私检查")
-    ap.add_argument("--all", action="store_true", help="检查全部跟踪文件")
+    ap = argparse.ArgumentParser(description="推送前隐私检查与自动脱敏")
+    ap.add_argument("--check", action="store_true", help="只检查（默认）")
+    ap.add_argument("--fix", action="store_true", help="就地脱敏，改不掉的仍拦截")
+    ap.add_argument("--auto", action="store_true", help="全自动：能改的改，改不掉的文件撤出提交")
+    ap.add_argument("--all", action="store_true", help="检查全部跟踪文件（配合 --check）")
     ap.add_argument("--files", nargs="*", help="指定文件")
     args = ap.parse_args()
+
+    mode = "auto" if args.auto else ("fix" if args.fix else "check")
 
     if args.files:
         paths = args.files
@@ -187,38 +301,65 @@ def main() -> int:
             return 0
 
     findings = scan(paths)
-    blocking = [f for f in findings if f[4] == "block"]
-    warnings = [f for f in findings if f[4] != "block"]
-
     if not findings:
         print(f"隐私检查通过：{len(paths)} 个文件，未发现问题 ✓")
         return 0
 
-    def dump(items: list[tuple[str, int, str, str, str]]) -> None:
-        seen: set[tuple[str, str]] = set()
-        for rel, line_no, label, snippet, _level in items:
-            key = (rel, label)
-            if key in seen:
-                continue
-            seen.add(key)
-            where = f"第 {line_no} 行" if line_no else "整个文件"
-            print(f"  ● {rel}（{where}）")
-            print(f"      {label}：{snippet}")
+    if mode == "check":
+        blocking = [f for f in findings if f[4] in ("block", "prose")]
+        warnings = [f for f in findings if f[4] == "warn"]
+        dump(blocking, "⚠ 没通过：这些内容必须处理")
+        dump(warnings, "提醒（不阻止提交）")
+        if blocking:
+            print("\n已中止。用 --fix 自动脱敏，或用 --auto 全自动处理。")
+            return 1
+        print("\n检查通过（有提醒项，但没有阻断项）✓")
+        return 0
 
-    if blocking:
-        print(f"⚠ 隐私检查没通过：{len(blocking)} 处必须处理\n")
-        dump(blocking)
-    if warnings:
-        print(f"\n提醒（不阻止提交）：{len(warnings)} 处值得看一眼\n")
-        dump(warnings)
+    # ---- 脱敏模式 ----
+    fixable = [f for f in findings if f[2] in FIXERS]
+    unfixable = [f for f in findings if f[2] not in FIXERS and f[4] in ("block", "prose")]
+    warnings = [f for f in findings if f[4] == "warn" and f[2] not in FIXERS]
 
-    if blocking:
-        print(
-            "\n已中止提交。处理办法：删掉或脱敏这些内容，或把文件加进 .gitignore。\n"
-            "确认确实要上传，就手动 git commit 再 git push，检查只拦自动化流程。"
-        )
+    changed_files = sorted({f[0] for f in fixable})
+    print(f"自动脱敏：{len(changed_files)} 个文件、{len(fixable)} 处")
+    for rel in changed_files:
+        applied = sanitize(Path(rel))
+        if not applied:
+            continue
+        detail = "、".join(f"{label}×{count}" for label, count in applied)
+        print(f"  ● {rel}：{detail}")
+        log(f"脱敏 {rel}：{detail}")
+        for label, _count in applied:
+            sample = next((f[3] for f in fixable if f[0] == rel and f[2] == label), "")
+            if sample:
+                log(f"    命中示例 {label}：{sample}")
+        subprocess.run(["git", "add", "--", rel], capture_output=True)
+
+    if unfixable:
+        files = sorted({f[0] for f in unfixable})
+        print(f"\n改不掉的内容（整段私人文字）：{len(files)} 个文件")
+        for rel in files:
+            labels = sorted({f[2] for f in unfixable if f[0] == rel})
+            print(f"  ● {rel}：{'、'.join(labels)}")
+            log(f"撤出提交 {rel}：{'、'.join(labels)}")
+        if mode == "auto":
+            for rel in files:
+                subprocess.run(["git", "restore", "--staged", "--", rel], capture_output=True)
+            print("  已撤出本次提交（本地文件保留，只是不推上去）")
+        else:
+            print("\n--fix 不会自动撤出文件。处理掉这些内容，或改用 --auto。")
+            return 1
+
+    dump(warnings, "提醒（不阻止提交）")
+
+    remaining = [f for f in scan(staged_files()) if f[4] in ("block", "prose")]
+    if remaining:
+        dump(remaining, "⚠ 复查仍有问题")
         return 1
-    print("\n检查通过（有提醒项，但没有阻断项）✓")
+
+    print("\n处理完成，可以继续提交 ✓")
+    log(f"运行模式 {mode}：完成")
     return 0
 
 

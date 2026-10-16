@@ -391,12 +391,12 @@ def main() -> int:
     run_git(repo, env, "pull", "--ff-only")
     run_git(repo, env, "add", "-A")
 
-    # 提交前先过一遍隐私检查，避免把私人内容推到公开仓库
+    # 提交前先过一遍隐私检查并自动脱敏，避免把私人内容推到公开仓库
     checker = repo / "tools" / "security" / "privacy_check.py"
     if checker.exists():
-        print("隐私检查：")
+        print("隐私检查与自动脱敏：")
         proc = subprocess.run(
-            [sys.executable, str(checker)],
+            [sys.executable, str(checker), "--auto"],
             cwd=repo,
             capture_output=True,
             text=True,
@@ -405,7 +405,7 @@ def main() -> int:
         )
         print("  " + (proc.stdout or "").strip().replace("\n", "\n  "))
         if proc.returncode != 0:
-            print("\n隐私检查没通过，已中止自动推送。请先处理上面的问题。")
+            print("\n自动脱敏后仍有问题，已中止自动推送。")
             return 1
 
     code, out = run_git(repo, env, "commit", "-m", f"自动收录 {len(added)} 个新项目（{stamp}）")
