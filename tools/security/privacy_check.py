@@ -21,6 +21,13 @@ import subprocess
 import sys
 from pathlib import Path
 
+# 中文 Windows 的控制台默认是 GBK，直接打印 ✓ / ⚠ 会崩，这里强制 UTF-8
+try:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+except (AttributeError, ValueError):
+    pass
+
 # ---------------------------------------------------------------- 规则
 
 USER = Path.home().name  # 运行时取，不写死
