@@ -10,12 +10,13 @@
 
 它会在当前设计里生成：
   - 艇体回转实体（按纵向轮廓放样）
-  - 16 道隔框环（可当骨架参考，也可以直接 3D 打印）
+  - 15 道隔框环（按实机「隔框间距 15 m」换算）
+  - 4 片尾翼（暂定几何，尺寸见参数；尾翼的 STL 已在图纸与模型目录里）
   - 可选：导出 STL
 
 参数都在下面的“参数”一节，改完重新运行即可。
 注意：艇体纵向轮廓是近似放样（文档未提供原始型线图）。
-尾翼没有做——文档只给了“全高 35 mm”，缺展长/弦长/根部站位，见 README 的说明。
+尾翼尺寸为暂定值：公开资料查不到 LZ127 尾翼尺寸，按典型齐柏林尾翼比例暂定。
 """
 
 import math
@@ -41,9 +42,18 @@ FRAME_T = 0.4               # 隔框径向厚度 mm
 EXPORT_STL = False          # 改成 True 并把下面路径换成你自己的目录
 STL_DIR = "C:/Users/<user>/Desktop/DIY_stl"
 
-# 隔框站位（t = 距离艇首的比例），要和图纸里的 F01-F16 对上
-STATIONS = [0.050, 0.090, 0.135, 0.185, 0.240, 0.300, 0.365, 0.435,
-            0.505, 0.575, 0.645, 0.712, 0.775, 0.833, 0.885, 0.930]
+# 隔框站位：实机隔框间距 15 m，换算到 1:1000 后位于 z = 15, 30, ..., 225 mm
+RING_PITCH_M = 15.0
+STATIONS = [(k * RING_PITCH_M) / REAL_LEN_M for k in range(1, 16)]
+
+# 尾翼（暂定几何）
+FIN_ROOT_START = 0.74
+FIN_ROOT_END = 0.99
+FIN_SPAN = 12.0
+FIN_TAPER = 0.85
+FIN_SWEEP = 0.10
+FIN_THICK = 1.2
+MAKE_FINS = True
 
 # 纵向轮廓控制点 (t, r/R)
 CTRL = [
@@ -173,6 +183,41 @@ def export_stls(root, folder):
     return root.bRepBodies.count
 
 
+def build_fins(root):
+    """4 片尾翼：绕 X 轴做 4 个成角平面，每个平面画梯形轮廓、对称拉伸成薄板。"""
+    made = 0
+    z0 = FIN_ROOT_START * LEN_MM
+    z1 = FIN_ROOT_END * LEN_MM
+    z_lead = z0 + FIN_SWEEP * LEN_MM
+    planes = root.constructionPlanes
+
+    def r_at(z):
+        return radius_at(z / LEN_MM)
+
+    for phi_deg in (0.0, 90.0, 180.0, 270.0):
+        pi = planes.createInput()
+        pi.setByAngle(root.xConstructionAxis,
+                      adsk.core.ValueInput.createByReal(math.radians(phi_deg)),
+                      root.xYConstructionPlane)
+        plane = planes.add(pi)
+        sk = root.sketches.add(plane)
+        sk.name = "尾翼 %d 度" % int(phi_deg)
+        p0 = adsk.core.Point3D.create(z0, r_at(z0), 0)
+        p1 = adsk.core.Point3D.create(z1, r_at(z1), 0)
+        p2 = adsk.core.Point3D.create(z1, r_at(z1) + FIN_SPAN * FIN_TAPER, 0)
+        p3 = adsk.core.Point3D.create(z_lead, r_at(z_lead) + FIN_SPAN, 0)
+        for a, b in ((p0, p1), (p1, p2), (p2, p3), (p3, p0)):
+            sk.sketchCurves.sketchLines.addByTwoPoints(a, b)
+        prof = sk.profiles.item(0)
+        ext = root.features.extrudeFeatures
+        inp = ext.createInput(prof, adsk.fusion.FeatureOperations.NewBodyFeatureOperation)
+        inp.setSymmetricExtent(adsk.core.ValueInput.createByReal(FIN_THICK / 2.0), True)
+        b = ext.add(inp).bodies.item(0)
+        b.name = "尾翼 %d 度" % int(phi_deg)
+        made += 1
+    return made
+
+
 def run(context):
     ui = None
     log = []
@@ -201,6 +246,13 @@ def run(context):
             except Exception as e:
                 log.append("[失败] 隔框：%s" % e)
 
+        if MAKE_FINS:
+            try:
+                n = build_fins(root)
+                log.append("[OK] 尾翼 %d 片（暂定几何，外伸 %.1f mm）" % (n, FIN_SPAN))
+            except Exception as e:
+                log.append("[失败] 尾翼：%s（不影响艇体与隔框；尾翼 STL 在图纸与模型目录里）" % e)
+
         if EXPORT_STL:
             try:
                 n = export_stls(root, STL_DIR)
@@ -209,8 +261,7 @@ def run(context):
                 log.append("[失败] 导出 STL：%s" % e)
 
         log.append("")
-        log.append("提示：尾翼未生成——文档只给了全高 35 mm，")
-        log.append("缺尾翼展长、弦长、根部站位，定了这三个数就能补上。")
+        log.append("提示：尾翼为暂定几何；艇体纵向轮廓为近似放样，最大直径位置设在全长 42%% 处。")
         if ui:
             ui.messageBox("\n".join(log), "1:1000 齐柏林飞艇 · 生成完成")
     except Exception:
