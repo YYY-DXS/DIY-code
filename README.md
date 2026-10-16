@@ -19,7 +19,7 @@
 本机已经配好 SSH 密钥，可以直接拉取和推送：
 
 ```bash
-git clone git@github.com:YYY-DXS/DIY-.git
+git clone git@github.com:YYY-DXS/DIY-code.git
 git pull
 git push
 ```
