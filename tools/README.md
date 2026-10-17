@@ -32,6 +32,7 @@
 | `auto-publish/` | 自动发现新项目、生成文档并推送 |
 | `md2readable/` | 把 Markdown 转成 HTML 和 DOCX 两种易读格式 |
 | `security/` | 推送前的隐私检查与**自动脱敏**：密钥、手机号、本机用户名、健康描述等 |
+| `codex-portable/` | Codex 数据整理与迁移：四类盘点、打包还原、隐私加密 |
 
 ## 推送前的隐私检查与自动脱敏
 

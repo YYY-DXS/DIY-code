@@ -1,0 +1,10 @@
+*.bak
+*.bak-*
+*.tmp
+*.log
+*.tar.gz
+*.enc
+Codex迁移包/
+00-清单/
+.DS_Store
+Thumbs.db
