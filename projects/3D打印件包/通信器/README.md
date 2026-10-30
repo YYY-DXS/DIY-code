@@ -6,6 +6,16 @@
 | 通信器_上背板.stl | 79.8 × 49.8 × 2 | 盖住屏幕仓，4 颗 M2 |
 | 通信器_下壳.stl | 80 × 50 × 26 | 键盘半，45 × 45 键盘孔 + 电池限位 |
 | 通信器_下背板.stl | 79.8 × 49.8 × 2 | 盖住主板仓，4 颗 M2 |
+| Fusion360_Communicator/ | — | Fusion 360 参数化脚本，改参数即可重建 |
+
+## 在 Fusion 里重建
+
+1. Utilities → Add-Ins → Scripts → Open Script Folder
+2. 把 `Fusion360_Communicator` 整个文件夹拷进去
+3. 刷新后选中 `Communicator_Case`，点 Run
+
+脚本会生成上壳、下壳、两块背板四个实体；改文件顶部的 `UP_H / LOW_H / WIN_W / KEY` 等参数可整体重算。
+脚本里的 `EXPORT_STL = False` 改成 `True` 并设好 `STL_DIR`，运行后会自动导出 STL。
 
 ## 结构要点
 

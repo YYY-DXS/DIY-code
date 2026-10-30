@@ -1,0 +1,10 @@
+{
+    "autodeskProduct": "Fusion",
+    "type": "script",
+    "author": "Codex",
+    "description": {
+        "": "折叠中文通信器外壳 —— 参数化生成上壳/下壳/背板"
+    },
+    "supportedOS": "windows|mac",
+    "editEnabled": true
+}
