@@ -1,0 +1,15 @@
+{
+  "main": "build/server.cjs",
+  "output": "build/tech-pulse.blob",
+  "disableExperimentalSEAWarning": true,
+  "useSnapshot": false,
+  "useCodeCache": false,
+  "assets": {
+    "public/index.html": "public/index.html",
+    "public/styles.css": "public/styles.css",
+    "public/app.js": "public/app.js",
+    "public/icon.svg": "public/icon.svg",
+    "public/manifest.webmanifest": "public/manifest.webmanifest",
+    "scripts/toast.ps1": "scripts/toast.ps1"
+  }
+}

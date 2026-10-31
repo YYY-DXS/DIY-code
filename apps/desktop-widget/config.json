@@ -1,0 +1,22 @@
+{
+  "city": "杭州",
+  "latitude": 30.2741,
+  "longitude": 120.1551,
+  "timezone": "Asia/Shanghai",
+  "weather_refresh_minutes": 10,
+
+  "deepseek": {
+    "api_key": "",
+    "refresh_minutes": 5,
+    "currency": "CNY"
+  },
+
+  "resources": {
+    "disk": "C:",
+    "sample_seconds": 2.0,
+    "cpu_history": 60
+  },
+
+  "opacity_levels": [1.0, 0.9, 0.78, 0.62],
+  "position": null
+}

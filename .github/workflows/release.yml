@@ -1,0 +1,39 @@
+name: Publish apps
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Package apps
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Get-ChildItem -Path apps -Directory | ForEach-Object {
+            $name = $_.Name
+            Compress-Archive -Path $_.FullName -DestinationPath (Join-Path dist "$name.zip") -Force
+          }
+          $lines = Get-ChildItem -Path dist -Filter *.zip | ForEach-Object {
+            $hash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLower()
+            "$hash  $($_.Name)"
+          }
+          Set-Content -Path dist/SHA256SUMS.txt -Value $lines -Encoding utf8
+
+      - name: Create release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = $env:GITHUB_REF_NAME
+          $files = @(Get-ChildItem -Path dist -File | ForEach-Object { $_.FullName })
+          gh release create "$tag" @files --title "DIY 软件合集 $tag" --notes-file apps/release-notes.md

@@ -1,0 +1,489 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Name="MainWindow"
+        Title="电脑管家"
+        Height="660" Width="940" MinHeight="560" MinWidth="860"
+        WindowStartupLocation="CenterScreen"
+        Background="#F4F6F9"
+        FontFamily="Microsoft YaHei UI, Microsoft YaHei, Segoe UI"
+        TextOptions.TextFormattingMode="Display">
+  <Window.Resources>
+
+    <SolidColorBrush x:Key="AccentBrush" Color="#2F6FED"/>
+    <SolidColorBrush x:Key="TextBrush" Color="#1F2329"/>
+    <SolidColorBrush x:Key="SubTextBrush" Color="#6B7280"/>
+    <SolidColorBrush x:Key="LineBrush" Color="#E9ECEF"/>
+
+    <Style x:Key="PageTitle" TargetType="TextBlock">
+      <Setter Property="Foreground" Value="#1F2329"/>
+      <Setter Property="FontSize" Value="19"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Margin" Value="0,0,0,8"/>
+    </Style>
+
+    <Style x:Key="PageDesc" TargetType="TextBlock">
+      <Setter Property="Foreground" Value="{StaticResource SubTextBrush}"/>
+      <Setter Property="FontSize" Value="13"/>
+      <Setter Property="TextWrapping" Value="Wrap"/>
+      <Setter Property="LineHeight" Value="21"/>
+      <Setter Property="Margin" Value="0,0,0,16"/>
+    </Style>
+
+    <Style x:Key="SubTitle" TargetType="TextBlock">
+      <Setter Property="Foreground" Value="#374151"/>
+      <Setter Property="FontSize" Value="13.5"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Margin" Value="0,4,0,8"/>
+    </Style>
+
+    <Style x:Key="LabelText" TargetType="TextBlock">
+      <Setter Property="Foreground" Value="#4B5563"/>
+      <Setter Property="FontSize" Value="13"/>
+      <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <Style x:Key="Card" TargetType="Border">
+      <Setter Property="Background" Value="#F8FAFC"/>
+      <Setter Property="BorderBrush" Value="#EDF0F4"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="8"/>
+      <Setter Property="Padding" Value="18"/>
+    </Style>
+
+    <Style x:Key="PrimaryButton" TargetType="Button">
+      <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+      <Setter Property="Foreground" Value="White"/>
+      <Setter Property="FontSize" Value="14"/>
+      <Setter Property="Height" Value="38"/>
+      <Setter Property="MinWidth" Value="118"/>
+      <Setter Property="Padding" Value="18,0"/>
+      <Setter Property="Margin" Value="0,0,10,10"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="6"
+                    Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True">
+              <ContentPresenter x:Name="cp" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="bd" Property="Background" Value="#1E5FD9"/>
+              </Trigger>
+              <Trigger Property="IsPressed" Value="True">
+                <Setter TargetName="bd" Property="Background" Value="#1A52BF"/>
+              </Trigger>
+              <Trigger Property="IsEnabled" Value="False">
+                <Setter TargetName="bd" Property="Background" Value="#C3D3F5"/>
+                <Setter TargetName="cp" Property="TextElement.Foreground" Value="#FFFFFF"/>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <Style x:Key="SecondaryButton" TargetType="Button">
+      <Setter Property="Background" Value="White"/>
+      <Setter Property="Foreground" Value="#374151"/>
+      <Setter Property="FontSize" Value="14"/>
+      <Setter Property="Height" Value="38"/>
+      <Setter Property="MinWidth" Value="118"/>
+      <Setter Property="Padding" Value="16,0"/>
+      <Setter Property="Margin" Value="0,0,10,10"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="6"
+                    BorderBrush="#D7DCE3" BorderThickness="1"
+                    Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True">
+              <ContentPresenter x:Name="cp" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="bd" Property="Background" Value="#F4F7FE"/>
+                <Setter TargetName="bd" Property="BorderBrush" Value="#B9CCF2"/>
+              </Trigger>
+              <Trigger Property="IsPressed" Value="True">
+                <Setter TargetName="bd" Property="Background" Value="#EAF1FE"/>
+              </Trigger>
+              <Trigger Property="IsEnabled" Value="False">
+                <Setter TargetName="bd" Property="BorderBrush" Value="#E9ECEF"/>
+                <Setter TargetName="cp" Property="TextElement.Foreground" Value="#B0B6BE"/>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <Style x:Key="GhostButton" TargetType="Button">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="Foreground" Value="#2F6FED"/>
+      <Setter Property="FontSize" Value="13"/>
+      <Setter Property="Height" Value="32"/>
+      <Setter Property="Padding" Value="10,0"/>
+      <Setter Property="Margin" Value="0"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="6"
+                    Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True">
+              <ContentPresenter x:Name="cp" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="bd" Property="Background" Value="#EFF4FE"/>
+              </Trigger>
+              <Trigger Property="IsEnabled" Value="False">
+                <Setter TargetName="cp" Property="TextElement.Foreground" Value="#B0B6BE"/>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <Style x:Key="DangerButton" TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
+      <Setter Property="Foreground" Value="#C62828"/>
+    </Style>
+
+    <Style x:Key="NavItemStyle" TargetType="ListBoxItem">
+      <Setter Property="Foreground" Value="#4B5563"/>
+      <Setter Property="FontSize" Value="13.5"/>
+      <Setter Property="Padding" Value="16,10"/>
+      <Setter Property="Margin" Value="8,2"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="ListBoxItem">
+            <Border x:Name="navBd" Background="Transparent" CornerRadius="6" Padding="{TemplateBinding Padding}">
+              <ContentPresenter x:Name="navCp" VerticalAlignment="Center"/>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="navBd" Property="Background" Value="#F3F4F6"/>
+              </Trigger>
+              <Trigger Property="IsSelected" Value="True">
+                <Setter TargetName="navBd" Property="Background" Value="#EAF1FE"/>
+                <Setter TargetName="navCp" Property="TextElement.Foreground" Value="#2F6FED"/>
+                <Setter TargetName="navCp" Property="TextElement.FontWeight" Value="SemiBold"/>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <Style x:Key="MyCheckBox" TargetType="CheckBox">
+      <Setter Property="Foreground" Value="#374151"/>
+      <Setter Property="FontSize" Value="13"/>
+      <Setter Property="Margin" Value="0,0,20,10"/>
+      <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+
+    <Style x:Key="MyTextBox" TargetType="TextBox">
+      <Setter Property="Background" Value="White"/>
+      <Setter Property="Foreground" Value="#1F2329"/>
+      <Setter Property="BorderBrush" Value="#D7DCE3"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="Padding" Value="8,5"/>
+      <Setter Property="FontSize" Value="13"/>
+      <Setter Property="Height" Value="32"/>
+      <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+
+    <Style x:Key="MyCombo" TargetType="ComboBox">
+      <Setter Property="Background" Value="White"/>
+      <Setter Property="Foreground" Value="#1F2329"/>
+      <Setter Property="BorderBrush" Value="#D7DCE3"/>
+      <Setter Property="Padding" Value="8,5"/>
+      <Setter Property="FontSize" Value="13"/>
+      <Setter Property="Height" Value="32"/>
+      <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+
+  </Window.Resources>
+
+  <Grid>
+    <Grid.RowDefinitions>
+      <RowDefinition Height="56"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+
+    <!-- ==================== 顶栏 ==================== -->
+    <Border Grid.Row="0" Background="White" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1">
+      <Grid Margin="18,0,14,0">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="Auto"/>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
+        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+          <Image x:Name="AppIcon" Width="26" Height="26" Margin="0,0,10,0"/>
+          <TextBlock Text="电脑管家" FontSize="17" FontWeight="SemiBold" Foreground="#1F2329" VerticalAlignment="Center"/>
+          <TextBlock Text="v1.0" FontSize="11.5" Foreground="#9AA0A6" Margin="8,2,0,0" VerticalAlignment="Center"/>
+        </StackPanel>
+        <TextBlock Grid.Column="1" Text="体检 · 修复运行环境 · 整理文件 · 清理垃圾"
+                   FontSize="12.5" Foreground="#9AA0A6" VerticalAlignment="Center" Margin="24,0,0,0"/>
+        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+          <Border x:Name="AdminBadge" Background="#FFF7E6" CornerRadius="11" Padding="10,3" Margin="0,0,8,0">
+            <TextBlock x:Name="AdminText" Text="普通权限" Foreground="#B26A00" FontSize="12"/>
+          </Border>
+          <Button x:Name="AdminButton" Content="以管理员身份重启" Style="{StaticResource GhostButton}"
+                  MinWidth="0" Padding="10,0" Margin="0"/>
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <!-- ==================== 主体 ==================== -->
+    <Grid Grid.Row="1">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="182"/>
+        <ColumnDefinition Width="*"/>
+      </Grid.ColumnDefinitions>
+
+      <!-- 左侧导航 -->
+      <Border Grid.Column="0" Background="White" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,1,0">
+        <Grid>
+          <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+          </Grid.RowDefinitions>
+          <ListBox x:Name="NavList" Grid.Row="0" Background="Transparent" BorderThickness="0"
+                   ItemContainerStyle="{StaticResource NavItemStyle}"
+                   ScrollViewer.HorizontalScrollBarVisibility="Disabled" Margin="0,12,0,0">
+            <ListBoxItem Content="电脑体检"/>
+            <ListBoxItem Content="文件整理"/>
+            <ListBoxItem Content="垃圾清理"/>
+            <ListBoxItem Content="系统修复"/>
+            <ListBoxItem Content="空间管理"/>
+            <ListBoxItem Content="使用说明"/>
+          </ListBox>
+          <StackPanel Grid.Row="1" Margin="8,0,8,12">
+            <Button x:Name="OpenReportButton" Content="打开报告文件夹" Style="{StaticResource SecondaryButton}"
+                    FontSize="12.5" Height="32" MinWidth="0" Padding="8,0" Margin="0,0,0,6"/>
+            <Button x:Name="ExitButton" Content="退出" Style="{StaticResource SecondaryButton}"
+                    FontSize="12.5" Height="32" MinWidth="0" Padding="8,0" Margin="0"/>
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <!-- 右侧内容卡片 -->
+      <Border Grid.Column="1" Background="White" BorderBrush="{StaticResource LineBrush}"
+              BorderThickness="1" CornerRadius="8" Margin="16,14,16,12" Padding="24,20,24,8">
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+          <Grid>
+
+            <!-- 1. 电脑体检 -->
+            <StackPanel x:Name="PageScan" Visibility="Visible">
+              <TextBlock Text="电脑体检" Style="{StaticResource PageTitle}"/>
+              <TextBlock Style="{StaticResource PageDesc}"
+                         Text="只读检查，不改动任何东西。会看系统概况、磁盘空间、垃圾体积、启动项、出错的服务和设备、环境变量、运行库、断掉的快捷方式、最近 7 天的错误日志，然后给出健康分和该按什么顺序修。"/>
+              <Border Style="{StaticResource Card}" Margin="0,0,0,16">
+                <Grid>
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                  </Grid.ColumnDefinitions>
+                  <StackPanel Grid.Column="0" Margin="0,0,26,0" VerticalAlignment="Center">
+                    <TextBlock x:Name="ScoreValue" Text="--" Foreground="#9AA0A6" FontSize="46" FontWeight="Bold" HorizontalAlignment="Center"/>
+                    <TextBlock x:Name="ScoreGrade" Text="还没有体检过" Foreground="#6B7280" FontSize="12.5"
+                               HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                  </StackPanel>
+                  <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Text="体检结果" Foreground="#1F2329" FontSize="14.5" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                    <TextBlock x:Name="ScoreHint" Foreground="#4B5563" FontSize="13" TextWrapping="Wrap" LineHeight="21"
+                               Text="点下面的「开始体检」。跑完这里会显示分数和主要问题，完整报告会存到「报告」文件夹。"/>
+                  </StackPanel>
+                </Grid>
+              </Border>
+              <CheckBox x:Name="ChkQuick" Content="快速模式（跳过垃圾体积统计，快很多）" Style="{StaticResource MyCheckBox}"/>
+              <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                <Button x:Name="BtnScan" Content="开始体检" Style="{StaticResource PrimaryButton}"/>
+                <Button x:Name="BtnOpenLastReport" Content="打开上次报告" Style="{StaticResource SecondaryButton}"/>
+              </StackPanel>
+            </StackPanel>
+
+            <!-- 2. 文件整理 -->
+            <StackPanel x:Name="PageOrganize" Visibility="Collapsed">
+              <TextBlock Text="文件整理" Style="{StaticResource PageTitle}"/>
+              <TextBlock Style="{StaticResource PageDesc}"
+                         Text="把散落在下载、桌面、文档里的文件按类型归类。每次移动都会记录，随时可以一键撤销。建议先点「预览方案」看一眼，确认了再执行。"/>
+
+              <TextBlock Text="整理范围" Style="{StaticResource SubTitle}"/>
+              <WrapPanel>
+                <CheckBox x:Name="ChkDownloads" Content="下载" Style="{StaticResource MyCheckBox}" IsChecked="True"/>
+                <CheckBox x:Name="ChkDesktop" Content="桌面" Style="{StaticResource MyCheckBox}"/>
+                <CheckBox x:Name="ChkDocuments" Content="文档" Style="{StaticResource MyCheckBox}"/>
+                <CheckBox x:Name="ChkCustom" Content="自定义" Style="{StaticResource MyCheckBox}"/>
+                <Button x:Name="BtnBrowse" Content="选择文件夹..." Style="{StaticResource GhostButton}"
+                        Margin="0,0,10,10"/>
+              </WrapPanel>
+              <TextBox x:Name="TxtCustomPath" Style="{StaticResource MyTextBox}" IsReadOnly="True" Width="470"
+                       HorizontalAlignment="Left" Text="（未选择）" Margin="0,0,0,6"/>
+
+              <TextBlock Text="归类方式" Style="{StaticResource SubTitle}"/>
+              <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                <ComboBox x:Name="CmbLayout" Style="{StaticResource MyCombo}" Width="228" SelectedIndex="0">
+                  <ComboBoxItem Content="按文件类型分文件夹"/>
+                  <ComboBoxItem Content="按年月 + 类型分文件夹"/>
+                  <ComboBoxItem Content="全部移到按年份的归档文件夹"/>
+                </ComboBox>
+                <TextBlock Text="只整理" Style="{StaticResource LabelText}" Margin="18,0,8,0"/>
+                <TextBox x:Name="TxtMinAge" Style="{StaticResource MyTextBox}" Width="54" Text="0"/>
+                <TextBlock Text="天以前改动过的文件（0 = 全部都整理）" Style="{StaticResource LabelText}" Margin="8,0,0,0"/>
+              </StackPanel>
+
+              <StackPanel Orientation="Horizontal" Margin="0,18,0,0">
+                <Button x:Name="BtnPreviewOrganize" Content="预览方案" Style="{StaticResource PrimaryButton}"/>
+                <Button x:Name="BtnApplyOrganize" Content="执行整理" Style="{StaticResource SecondaryButton}"/>
+                <Button x:Name="BtnUndoOrganize" Content="撤销上次整理" Style="{StaticResource DangerButton}"/>
+              </StackPanel>
+            </StackPanel>
+
+            <!-- 3. 垃圾清理 -->
+            <StackPanel x:Name="PageClean" Visibility="Collapsed">
+              <TextBlock Text="垃圾清理" Style="{StaticResource PageTitle}"/>
+              <TextBlock Style="{StaticResource PageDesc}"
+                         Text="只删临时文件、缓存、错误报告和崩溃转储。正在被程序占用的文件会自动跳过，不会硬删，你的文档和下载的文件不会被碰。"/>
+
+              <TextBlock Text="清理项目" Style="{StaticResource SubTitle}"/>
+              <WrapPanel>
+                <CheckBox x:Name="ChkCleanBrowser" Content="浏览器缓存（Edge / Chrome）" Style="{StaticResource MyCheckBox}"/>
+                <CheckBox x:Name="ChkCleanRecycle" Content="清空回收站" Style="{StaticResource MyCheckBox}"/>
+                <CheckBox x:Name="ChkCleanUpdate" Content="Windows 更新缓存" Style="{StaticResource MyCheckBox}"/>
+                <CheckBox x:Name="ChkCleanWinSxS" Content="系统组件仓库 WinSxS（省几个 GB，较慢）" Style="{StaticResource MyCheckBox}"/>
+              </WrapPanel>
+              <TextBlock Style="{StaticResource PageDesc}" Margin="0,6,0,0"
+                         Text="临时文件、错误报告、崩溃转储是默认就会清理的；上面几个是可选加项。清空回收站后无法恢复，所以单独勾选。"/>
+
+              <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                <Button x:Name="BtnPreviewClean" Content="预览可清理体积" Style="{StaticResource PrimaryButton}"/>
+                <Button x:Name="BtnApplyClean" Content="执行清理" Style="{StaticResource SecondaryButton}"/>
+              </StackPanel>
+            </StackPanel>
+
+            <!-- 4. 系统修复 -->
+            <StackPanel x:Name="PageRepair" Visibility="Collapsed">
+              <TextBlock Text="系统修复" Style="{StaticResource PageTitle}"/>
+              <TextBlock Style="{StaticResource PageDesc}"
+                         Text="用微软官方的方式修系统。建议顺序：先创建还原点，然后环境变量修复、清理垃圾、系统文件修复，做完重启再体检一次对比分数。"/>
+
+              <UniformGrid Columns="2" HorizontalAlignment="Left">
+                <Button x:Name="BtnRestorePoint" Content="创建系统还原点" Style="{StaticResource SecondaryButton}" MinWidth="196" HorizontalAlignment="Left"/>
+                <Button x:Name="BtnEnvRepair" Content="环境变量修复" Style="{StaticResource SecondaryButton}" MinWidth="196" HorizontalAlignment="Left"/>
+                <Button x:Name="BtnSysRepair" Content="系统文件修复（DISM + SFC）" Style="{StaticResource SecondaryButton}" MinWidth="196" HorizontalAlignment="Left"/>
+                <Button x:Name="BtnRuntime" Content="检查 / 安装运行库" Style="{StaticResource SecondaryButton}" MinWidth="196" HorizontalAlignment="Left"/>
+                <Button x:Name="BtnNetRepair" Content="重置网络组件" Style="{StaticResource SecondaryButton}" MinWidth="196" HorizontalAlignment="Left"/>
+                <Button x:Name="BtnUpdateRepair" Content="重置 Windows 更新组件" Style="{StaticResource SecondaryButton}" MinWidth="196" HorizontalAlignment="Left"/>
+                <Button x:Name="BtnIconRepair" Content="重建图标缓存" Style="{StaticResource SecondaryButton}" MinWidth="196" HorizontalAlignment="Left"/>
+                <Button x:Name="BtnDiskCheck" Content="磁盘检查（chkdsk /scan）" Style="{StaticResource SecondaryButton}" MinWidth="196" HorizontalAlignment="Left"/>
+              </UniformGrid>
+
+              <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                <Button x:Name="BtnFullRepair" Content="一键修复（按安全顺序全部走一遍）" Style="{StaticResource PrimaryButton}" MinWidth="0"/>
+              </StackPanel>
+              <TextBlock Style="{StaticResource PageDesc}" Margin="0,2,0,0"
+                         Text="系统文件修复和磁盘检查比较慢（10-30 分钟），需要管理员权限，过程中可以看下面的日志。"/>
+            </StackPanel>
+
+            <!-- 5. 空间管理 -->
+            <StackPanel x:Name="PageFind" Visibility="Collapsed">
+              <TextBlock Text="空间管理" Style="{StaticResource PageTitle}"/>
+              <TextBlock Style="{StaticResource PageDesc}"
+                         Text="重复文件按「文件内容哈希」比对，不是只看文件名，所以不会误判。多余副本只会被移动到备份文件夹，不会直接删除。查找范围沿用「文件整理」页面勾选的目录。"/>
+
+              <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                <CheckBox x:Name="ChkRecurse" Content="包含子文件夹" Style="{StaticResource MyCheckBox}" IsChecked="True"/>
+                <TextBlock Text="最小体积" Style="{StaticResource LabelText}" Margin="0,0,8,10"/>
+                <TextBox x:Name="TxtMinSizeKB" Style="{StaticResource MyTextBox}" Width="64" Text="64" Margin="0,0,6,10"/>
+                <TextBlock Text="KB（查重复用）" Style="{StaticResource LabelText}" Margin="0,0,18,10"/>
+                <TextBlock Text="大文件门槛" Style="{StaticResource LabelText}" Margin="0,0,8,10"/>
+                <TextBox x:Name="TxtMinMB" Style="{StaticResource MyTextBox}" Width="64" Text="200" Margin="0,0,6,10"/>
+                <TextBlock Text="MB" Style="{StaticResource LabelText}" Margin="0,0,0,10"/>
+              </StackPanel>
+
+              <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                <Button x:Name="BtnFindDup" Content="查找重复文件" Style="{StaticResource PrimaryButton}"/>
+                <Button x:Name="BtnMoveDup" Content="搬走多余副本" Style="{StaticResource SecondaryButton}"/>
+                <Button x:Name="BtnFindLarge" Content="查找大文件" Style="{StaticResource SecondaryButton}"/>
+              </StackPanel>
+              <TextBlock Style="{StaticResource PageDesc}" Margin="0,2,0,0"
+                         Text="「查找重复文件」只出清单；「搬走多余副本」会把它们移到 _重复文件备份_时间戳 文件夹，你确认没问题后再自己删。"/>
+            </StackPanel>
+
+            <!-- 6. 使用说明 -->
+            <ScrollViewer x:Name="PageHelp" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+              <StackPanel>
+                <TextBlock Text="使用说明" Style="{StaticResource PageTitle}"/>
+
+                <TextBlock Text="推荐流程" Style="{StaticResource SubTitle}"/>
+                <TextBlock Style="{StaticResource PageDesc}" Margin="0,0,0,12"
+                           Text="1. 电脑体检 —— 先看电脑有什么问题（只读，不需要管理员）。&#10;2. 系统修复 —— 先创建系统还原点，再做环境变量修复。&#10;3. 垃圾清理 —— 先预览体积，再执行。&#10;4. 系统修复 —— 系统文件修复（10-30 分钟），做完重启。&#10;5. 再体检一次，对比分数。&#10;6. 文件整理 —— 先预览方案，确认了再执行；不满意可以一键撤销。"/>
+
+                <TextBlock Text="安全设计" Style="{StaticResource SubTitle}"/>
+                <TextBlock Style="{StaticResource PageDesc}" Margin="0,0,0,12"
+                           Text="· 体检全程只读，不改任何东西。&#10;· 整理文件移动前先预览，移动后留记录，可一键撤销。&#10;· 修环境变量前会备份注册表和 PATH 明文到 _记录\备份。&#10;· 重复文件只移动不删除；被占用的文件会跳过。&#10;· 需要管理员权限的操作会先问你，不会偷偷提权。&#10;· 两个窗口同时干活时会互相提醒，不会重复开工。"/>
+
+                <TextBlock Text="这个工具做不到的事" Style="{StaticResource SubTitle}"/>
+                <TextBlock Style="{StaticResource PageDesc}" Margin="0,0,0,12"
+                           Text="· 某个软件自己带的文件丢了（报缺少它自己的 dll），只能重装那个软件。&#10;· 硬件坏了修不了，但体检里的磁盘状态能提前提醒你。&#10;· 不重装系统、不激活、不破解任何软件。"/>
+
+                <StackPanel Orientation="Horizontal">
+                  <Button x:Name="BtnMakeShortcut" Content="创建桌面快捷方式" Style="{StaticResource PrimaryButton}" MinWidth="0"/>
+                  <Button x:Name="BtnOpenHelp" Content="打开完整说明" Style="{StaticResource SecondaryButton}" MinWidth="0"/>
+                  <Button x:Name="BtnConsoleVersion" Content="命令行版" Style="{StaticResource SecondaryButton}" MinWidth="0"/>
+                  <Button x:Name="BtnOpenToolFolder" Content="打开工具文件夹" Style="{StaticResource SecondaryButton}" MinWidth="0"/>
+                </StackPanel>
+              </StackPanel>
+            </ScrollViewer>
+
+          </Grid>
+        </ScrollViewer>
+      </Border>
+    </Grid>
+
+    <!-- ==================== 日志 ==================== -->
+    <Border Grid.Row="2" Background="White" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,1,0,0"
+            Padding="18,8,14,10">
+      <Grid>
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <Grid Grid.Row="0" Margin="0,0,0,6">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto"/>
+          </Grid.ColumnDefinitions>
+          <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+            <TextBlock Text="运行状态：" Foreground="#9AA0A6" FontSize="12.5" VerticalAlignment="Center"/>
+            <TextBlock x:Name="TaskLabel" Text="就绪" Foreground="#2F6FED" FontSize="12.5" FontWeight="SemiBold" VerticalAlignment="Center"/>
+          </StackPanel>
+          <ProgressBar x:Name="ProgBar" Grid.Column="1" Height="4" Margin="16,0" Visibility="Hidden"
+                       IsIndeterminate="True" Foreground="#2F6FED" Background="#EDF0F4" BorderThickness="0"
+                       VerticalAlignment="Center"/>
+          <StackPanel Grid.Column="2" Orientation="Horizontal">
+            <Button x:Name="BtnToggleLog" Content="收起日志" Style="{StaticResource GhostButton}" Margin="0,0,6,0"/>
+            <Button x:Name="BtnStop" Content="中止任务" Style="{StaticResource SecondaryButton}"
+                    FontSize="12.5" Height="28" MinWidth="0" Padding="10,0" Margin="0,0,6,0" IsEnabled="False"/>
+            <Button x:Name="BtnClearLog" Content="清空" Style="{StaticResource SecondaryButton}"
+                    FontSize="12.5" Height="28" MinWidth="0" Padding="10,0" Margin="0,0,6,0"/>
+            <Button x:Name="BtnCopyLog" Content="复制日志" Style="{StaticResource SecondaryButton}"
+                    FontSize="12.5" Height="28" MinWidth="0" Padding="10,0" Margin="0"/>
+          </StackPanel>
+        </Grid>
+        <RichTextBox x:Name="LogBox" Grid.Row="1" Height="132" IsReadOnly="True" Background="#FCFCFD"
+                     Foreground="#374151" BorderBrush="#EDF0F4" BorderThickness="1"
+                     FontFamily="Consolas, Microsoft YaHei UI" FontSize="12"
+                     VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
+                     Padding="10,8"/>
+      </Grid>
+    </Border>
+  </Grid>
+</Window>
