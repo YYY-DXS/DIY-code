@@ -100,8 +100,12 @@ def git_env(keys_dir: Path) -> dict:
 
 
 def run_git(repo: Path, env: dict, *args: str) -> tuple[int, str]:
+    # 计划任务里 PATH 没有 git，直接指定运行时自带的 git.exe，
+    # 否则 Windows 解析可执行文件时找不到 git。
+    git_exe = GIT_BIN / "git.exe"
+    cmd = [str(git_exe) if git_exe.exists() else "git", *args]
     proc = subprocess.run(
-        ["git", *args], cwd=repo, env=env, capture_output=True, text=True, encoding="utf-8"
+        cmd, cwd=repo, env=env, capture_output=True, text=True, encoding="utf-8"
     )
     return proc.returncode, (proc.stdout or "") + (proc.stderr or "")
 
