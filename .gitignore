@@ -11,3 +11,7 @@ tools/auto-publish/seed_published.json
 # 隐私检查的备份与日志，只在本机保留
 tools/security/backup/
 tools/security/fix-log.txt
+
+# Python 缓存，自动推送时不要带上
+__pycache__/
+*.pyc
