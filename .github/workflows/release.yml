@@ -71,10 +71,12 @@ jobs:
           $updater = Join-Path $env:RUNNER_TEMP 'diy-updater'
           $updaterApps = Join-Path $updater 'apps'
           New-Item -ItemType Directory -Force -Path $updaterApps | Out-Null
-          foreach ($name in @('manifest.json', 'check-update.ps1', '更新所有软件.cmd')) {
+          foreach ($name in @('manifest.json', 'check-update.ps1', '更新所有软件.cmd', 'README.md')) {
             Copy-Item -LiteralPath (Join-Path 'apps' $name) -Destination $updaterApps -Force
           }
-          Compress-Archive -Path $updaterApps -DestinationPath (Join-Path dist 'updater.zip') -Force
+          # VERSION 也给一份：拿不到 GitHub API 时更新器用它兜底
+          Copy-Item -LiteralPath 'VERSION' -Destination $updater -Force
+          Compress-Archive -Path (Join-Path $updater '*') -DestinationPath (Join-Path dist 'updater.zip') -Force
           $lines = Get-ChildItem -Path dist -Filter *.zip | ForEach-Object {
             $hash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLower()
             "$hash  $($_.Name)"

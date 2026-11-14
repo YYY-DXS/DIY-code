@@ -36,14 +36,25 @@ DeepSeek Hub 面板、Lumen 译、汉化工具的桌面与开始菜单快捷方�
 
 ## 自动更新
 
-双击 `更新所有软件.cmd`，它会读取本目录的 `manifest.json`，把本地与线上
-不一致的文件逐个补齐。只覆盖清单里列出的文件，不会动你自己的数据
-（比如 `desktop-widget/config.json` 里填的 API Key 需要你自己保留）。
+**下载用户**：发行版里的 `updater.zip` 就是更新器。
 
-更新器两种通道自动切换：
+1. 把所有 zip 解压到同一个目录（例如 `D:\DIY`），包括 `updater.zip`
+2. 双击 `apps\更新所有软件.cmd`
 
-1. `raw.githubusercontent.com` 直连
-2. 失败时改用 GitHub API（`api.github.com`）取 base64 内容
+它按 `apps\manifest.json` 逐文件比对哈希，只补不一致的文件。默认基准是**最新 Release 的 tag**，
+不会拉未发布的 main。常用参数：
+
+| 参数 | 作用 |
+| --- | --- |
+| `-Check` | 只列出会更新哪些文件，不写入 |
+| `-Ref v2.0.5` | 指定版本（默认取最新 Release） |
+| `-Root D:\DIY` | 指定软件所在目录（默认是脚本上一层） |
+
+下载通道自动切换：`raw.githubusercontent.com` 直连，失败再用 GitHub API 取 base64。
+
+**本机数据永远不碰**：`data/`、`config.json`、`api.txt`、`balance_history.json`、`widget.log`
+即使出现在清单里也会被跳过。仓库布局（`apps\pc-toolkit\...`）和各 zip 解压到同一层
+（`pc-toolkit\...`）都支持；没安装的软件会跳过，不会凭空创建目录。
 
 ## 说明
 

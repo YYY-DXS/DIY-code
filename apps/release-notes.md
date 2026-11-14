@@ -1,8 +1,16 @@
-# DIY 软件合集 v2.0.5
+# DIY 软件合集 v2.0.6
 
 本次发行把仓库里所有可独立分发的软件打成 15 个 zip：8 个 Windows 桌面工具、4 个 DSH
 宿主插件、1 个生成器、1 个工具集、1 个更新器。每个包解压即用（个别需要 Node / Python / DSH
 运行时，见各包 README）。
+
+## v2.0.6 修复
+
+- **`updater.zip` 补上 `VERSION` 与 `apps/README.md`**：拿不到 GitHub API 时更新器可以用
+  VERSION 兜底确定版本；包内直接带更新说明，不用再回仓库找。
+- **更新说明改正**：此前 README 只写「双击 `更新所有软件.cmd`」，没说这个文件在
+  `updater.zip` 里。现在写清楚了：先解压 `updater.zip`，默认跟最新 Release tag，
+  以及 `-Check` / `-Ref` / `-Root` 三个参数。
 
 ## v2.0.5 修复
 
