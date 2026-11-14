@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f2f0e9" />
+    <meta
+      name="description"
+      content="每天自动聚合科技新闻、B站视频与 GitHub 创客项目。"
+    />
+    <title>科技脉冲 · Daily Tech Pulse</title>
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="noise" aria-hidden="true"></div>
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="科技脉冲首页">
+        <span class="brand-mark"><i></i><i></i><i></i></span>
+        <span class="brand-name">科技脉冲</span>
+        <span class="brand-en">TECH PULSE</span>
+      </a>
+      <div class="top-actions">
+        <button class="text-button" id="history-button" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M3 12a9 9 0 1 0 3-6.7L3 8m0-5v5h5M12 7v5l3 2" />
+          </svg>
+          回看
+        </button>
+        <button class="text-button" id="interests-button" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m12 3 2.6 5.3 5.9.9-4.3 4.2 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.2 5.9-.9L12 3Z" />
+          </svg>
+          兴趣词
+        </button>
+        <button class="text-button" id="settings-button" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1a1.7 1.7 0 0 0 1.9.3A1.7 1.7 0 0 0 10 3V2.8h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z" />
+          </svg>
+          设置
+        </button>
+      </div>
+    </header>
+
+    <main>
+      <section class="masthead">
+        <div class="masthead-copy">
+          <div class="eyebrow">
+            <span class="live-dot"></span>
+            DAILY INTELLIGENCE
+          </div>
+          <h1>把噪音关掉，<br /><em>只看今天真正重要的。</em></h1>
+          <p class="intro">
+            从科技媒体、Hacker News、B站与 GitHub 中，
+            提炼一份属于你的科技与动手项目晨报。
+          </p>
+        </div>
+        <div class="date-block">
+          <span class="date-day" id="date-day">--</span>
+          <span class="date-month" id="date-month">加载中</span>
+          <span class="date-year" id="date-year"></span>
+          <div class="edition-time">
+            <span>下次自动推送</span>
+            <strong id="next-edition">--:--</strong>
+          </div>
+        </div>
+      </section>
+
+      <div class="status-strip" id="status-strip" aria-live="polite">
+        <div class="status-main">
+          <span class="status-indicator"></span>
+          <span id="status-text">正在读取本地配置…</span>
+        </div>
+        <button class="primary-button" id="run-button" type="button">
+          <span class="button-spinner"></span>
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v6h-6" />
+          </svg>
+          <span>立即生成</span>
+        </button>
+      </div>
+
+      <div id="run-progress" class="run-progress" hidden>
+        <div class="progress-track"><i></i></div>
+        <span id="progress-label">正在汇集来源…</span>
+      </div>
+
+      <section id="welcome" class="welcome" hidden>
+        <div class="welcome-illustration" aria-hidden="true">
+          <div class="orbit orbit-one"></div>
+          <div class="orbit orbit-two"></div>
+          <div class="signal-bars"><i></i><i></i><i></i><i></i><i></i></div>
+          <span>01</span>
+        </div>
+        <div>
+          <span class="section-kicker">FIRST EDITION</span>
+          <h2>你的第一份日报，还差一次扫描。</h2>
+          <p>
+            点击“立即生成”，工具会立刻抓取近 30 小时的内容。
+            不需要账号或 API Key；如果 GitHub 请求额度紧张，可以稍后设置
+            <code>GITHUB_TOKEN</code>。
+          </p>
+        </div>
+      </section>
+
+      <section id="report-content" class="report-content" hidden>
+        <div class="brief-card">
+          <div class="brief-heading">
+            <span class="section-kicker">MORNING BRIEF</span>
+            <span class="edition-date" id="edition-date"></span>
+          </div>
+          <p class="brief-summary" id="brief-summary"></p>
+          <div class="metrics">
+            <div>
+              <strong id="metric-candidates">--</strong>
+              <span>候选信号</span>
+            </div>
+            <div>
+              <strong id="metric-sources">--</strong>
+              <span>内容来源</span>
+            </div>
+            <div>
+              <strong id="metric-time">--</strong>
+              <span>扫描用时</span>
+            </div>
+          </div>
+          <div class="source-rail" id="source-rail"></div>
+        </div>
+
+        <section class="news-section">
+          <div class="section-header">
+            <div>
+              <span class="section-number">01 / SIGNALS</span>
+              <h2>今日科技焦点</h2>
+            </div>
+            <p>按新鲜度、讨论热度与你的技术兴趣综合排序</p>
+          </div>
+          <div class="story-list" id="news-list"></div>
+        </section>
+
+        <section class="diy-section">
+          <div class="diy-header">
+            <div>
+              <span class="section-number light">02 / BUILD RADAR</span>
+              <h2>DIY 项目雷达</h2>
+              <p>从代码仓库与视频里，发现今天可以动手复刻的东西。</p>
+            </div>
+            <div class="radar-graphic" aria-hidden="true">
+              <i></i><i></i><i></i><span></span>
+            </div>
+          </div>
+          <div class="project-grid" id="diy-list"></div>
+        </section>
+
+        <section class="method-note">
+          <div>
+            <span class="section-number">03 / METHOD</span>
+            <h2>这不是简单的“最新列表”</h2>
+          </div>
+          <div class="method-grid">
+            <article>
+              <strong>30%</strong>
+              <h3>时间新鲜度</h3>
+              <p>越接近日报时间，权重越高；旧内容会被快速降权。</p>
+            </article>
+            <article>
+              <strong>24%</strong>
+              <h3>兴趣相关度</h3>
+              <p>ESP32、航模、机器人等可编辑关键词会参与匹配。</p>
+            </article>
+            <article>
+              <strong>24%</strong>
+              <h3>来源热度</h3>
+              <p>HN 点数、视频播放、GitHub stars 分来源换算。</p>
+            </article>
+            <article>
+              <strong>22%</strong>
+              <h3>可信与共振</h3>
+              <p>媒体质量与跨来源相似主题共同决定最终影响力。</p>
+            </article>
+          </div>
+        </section>
+
+        <div id="error-note" class="error-note" hidden></div>
+      </section>
+    </main>
+
+    <footer>
+      <span>科技脉冲 · 数据仅保存在本机</span>
+      <span>BUILT FOR CURIOUS MINDS</span>
+    </footer>
+
+    <div class="drawer-backdrop" id="drawer-backdrop" hidden></div>
+
+    <aside class="drawer settings-drawer" id="settings-drawer" aria-hidden="true">
+      <div class="drawer-head">
+        <div>
+          <span class="section-kicker">PREFERENCES</span>
+          <h2>日报设置</h2>
+        </div>
+        <button class="icon-button close-drawer" type="button" aria-label="关闭">×</button>
+      </div>
+      <form id="settings-form">
+        <section class="form-section">
+          <h3>定时推送</h3>
+          <div class="field-row two">
+            <label>
+              <span>每日推送时间</span>
+              <input type="time" name="editionTime" required />
+            </label>
+            <label>
+              <span>时区</span>
+              <select name="timezone">
+                <option value="Asia/Shanghai">中国标准时间</option>
+                <option value="Asia/Tokyo">东京时间</option>
+                <option value="Europe/London">伦敦时间</option>
+                <option value="America/New_York">纽约时间</option>
+                <option value="America/Los_Angeles">洛杉矶时间</option>
+              </select>
+            </label>
+          </div>
+          <label class="switch-line">
+            <span>
+              <strong>启用每日定时生成</strong>
+              <small>应用运行时会按设定时间自动生成并推送</small>
+            </span>
+            <input type="checkbox" name="enabled" />
+            <i></i>
+          </label>
+          <div class="field-row two">
+            <label>
+              <span>回溯小时数</span>
+              <input type="number" name="lookbackHours" min="6" max="168" />
+            </label>
+            <label>
+              <span>新闻 / DIY 展示数量</span>
+              <div class="paired-inputs">
+                <input type="number" name="maxNews" min="3" max="15" />
+                <input type="number" name="maxDiy" min="3" max="15" />
+              </div>
+            </label>
+          </div>
+        </section>
+
+        <section class="form-section">
+          <h3>内容来源</h3>
+          <div class="source-toggles">
+            <label><input type="checkbox" name="source-rss" /> 科技媒体 RSS</label>
+            <label><input type="checkbox" name="source-hackerNews" /> Hacker News</label>
+            <label><input type="checkbox" name="source-bilibili" /> B站</label>
+            <label><input type="checkbox" name="source-github" /> GitHub</label>
+          </div>
+          <label class="stacked">
+            <span>RSS 来源 <small>每行：名称 | 地址</small></span>
+            <textarea name="rssFeeds" rows="5" spellcheck="false"></textarea>
+          </label>
+          <label class="stacked">
+            <span>B站搜索词 <small>用逗号分隔</small></span>
+            <input type="text" name="bilibiliKeywords" />
+          </label>
+          <label class="stacked">
+            <span>GitHub topics <small>用逗号分隔</small></span>
+            <input type="text" name="githubTopics" />
+          </label>
+        </section>
+
+        <section class="form-section">
+          <h3>你的兴趣雷达</h3>
+          <label class="stacked">
+            <span>关键词 <small>每行一个，越靠前权重越高</small></span>
+            <textarea name="keywords" rows="8" spellcheck="false"></textarea>
+          </label>
+        </section>
+
+        <section class="form-section">
+          <h3>通知方式</h3>
+          <label class="switch-line">
+            <span>
+              <strong>Windows 系统通知</strong>
+              <small>生成日报时显示系统 Toast</small>
+            </span>
+            <input type="checkbox" name="windowsToast" />
+            <i></i>
+          </label>
+          <label class="switch-line">
+            <span>
+              <strong>浏览器通知</strong>
+              <small>页面打开且授权后生效</small>
+            </span>
+            <input type="checkbox" name="browserNotification" />
+            <i></i>
+          </label>
+          <label class="stacked">
+            <span>通用 Webhook <small>POST JSON，可留空</small></span>
+            <input type="url" name="webhookUrl" placeholder="https://..." />
+          </label>
+          <label class="stacked">
+            <span>Server酱 SendKey <small>可留空</small></span>
+            <input type="password" name="serverChanKey" autocomplete="off" />
+          </label>
+          <button class="secondary-button" id="test-notification" type="button">
+            测试当前通知
+          </button>
+        </section>
+
+        <p class="form-error" id="settings-error" hidden></p>
+        <div class="drawer-actions">
+          <button class="secondary-button close-drawer" type="button">取消</button>
+          <button class="primary-button" type="submit">保存设置</button>
+        </div>
+      </form>
+    </aside>
+
+    <aside class="drawer history-drawer" id="history-drawer" aria-hidden="true">
+      <div class="drawer-head">
+        <div>
+          <span class="section-kicker">READING MEMORY</span>
+          <h2>阅读回看</h2>
+        </div>
+        <button class="icon-button close-drawer" type="button" aria-label="关闭">×</button>
+      </div>
+      <div class="history-tabs" role="tablist" aria-label="回看类型">
+        <button class="is-active" data-history-tab="viewed" type="button" role="tab">
+          浏览记录
+        </button>
+        <button data-history-tab="archive" type="button" role="tab">日报归档</button>
+      </div>
+      <section id="view-history-panel" class="view-history-panel">
+        <div id="view-history-stats" class="view-history-stats"></div>
+        <div class="history-section-head">
+          <h3>最常浏览</h3>
+          <span>按实际打开次数</span>
+        </div>
+        <div id="most-viewed-list" class="browse-list"></div>
+        <div class="history-section-head recent-head">
+          <h3>最近看过</h3>
+          <span>从新到旧</span>
+        </div>
+        <div id="recent-viewed-list" class="browse-list"></div>
+      </section>
+      <section id="archive-history-panel" hidden>
+        <div id="history-list" class="history-list"></div>
+      </section>
+    </aside>
+
+    <div class="reader-overlay" id="reader-overlay" hidden>
+      <article class="reader-sheet" role="dialog" aria-modal="true" aria-labelledby="reader-title">
+        <div class="reader-toolbar">
+          <span class="section-kicker">OFFLINE READING VIEW</span>
+          <div>
+            <a id="reader-source-link" class="reader-source-link" href="#" target="_blank" rel="noopener noreferrer">
+              打开原网页 ↗
+            </a>
+            <button class="icon-button" id="reader-close" type="button" aria-label="关闭">×</button>
+          </div>
+        </div>
+        <img id="reader-image" class="reader-image" alt="" hidden />
+        <div class="reader-meta" id="reader-meta"></div>
+        <h2 id="reader-title"></h2>
+        <div class="reader-interests" id="reader-interests"></div>
+        <div class="reader-body" id="reader-body"></div>
+        <p class="reader-cache-note" id="reader-cache-note"></p>
+      </article>
+    </div>
+
+    <div class="toast" id="app-toast" role="status" hidden></div>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

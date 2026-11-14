@@ -29,6 +29,14 @@ powershell -ExecutionPolicy Bypass -File .\install-autostart.ps1
 powershell -ExecutionPolicy Bypass -File .\remove-autostart.ps1
 ```
 
+如果使用源码包（没有 `TechPulse.exe`），可以运行 `create-shortcuts.ps1` 生成桌面与
+开机启动快捷方式。脚本会自动判断：有 `TechPulse.exe` 就用它，没有就改用 Node 启动
+`server.mjs`，因此不再要求先编译 exe。
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\create-shortcuts.ps1
+```
+
 ## 内容来源
 
 - 科技媒体 RSS：默认包含 IT之家、少数派、Ars Technica、The Verge、TechCrunch、IEEE Spectrum，可在设置中增删。

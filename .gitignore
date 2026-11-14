@@ -5,6 +5,8 @@
 # 只在本机生成 / 只在本机使用，不上传到 GitHub
 *.docx
 *.html
+# 但科技脉冲的前端入口必须进仓库，否则 Release 包打开就 404
+!apps/tech-pulse/public/index.html
 tools/auto-publish/state.json
 tools/auto-publish/seed_published.json
 

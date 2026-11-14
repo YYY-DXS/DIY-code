@@ -95,7 +95,6 @@ namespace Raw2JpgStudio
 
         private ListView fileList;
         private SplitContainer contentSplit;
-        private SplitContainer contentSplit;
         private Label fileCountLabel;
         private Label emptyHintLabel;
         private PictureBox previewBox;

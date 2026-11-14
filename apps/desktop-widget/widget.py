@@ -45,7 +45,18 @@ import urllib.parse
 import urllib.request
 from datetime import datetime
 
-from PIL import Image, ImageDraw, ImageFilter, ImageFont
+try:
+    from PIL import Image, ImageDraw, ImageFilter, ImageFont
+except ImportError as exc:          # 首次运行最常见：Pillow 没装，闪退前先弹窗说清楚
+    ctypes.windll.user32.MessageBoxW(
+        0,
+        "缺少 Pillow 图像库，桌面小组件无法启动。\n\n"
+        "请双击同目录的「启动浮窗.bat」，它会自动安装依赖；\n"
+        "也可以手动运行：python -m pip install pillow",
+        "桌面小组件 · 缺少依赖",
+        0x10,
+    )
+    raise SystemExit(1) from exc
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(APP_DIR, "config.json")
@@ -2585,14 +2596,12 @@ class Widget:
         if not os.path.exists(shortcut_path()):
             log(f"[shortcut] 自动创建：{create_desktop_shortcut() or '失败'}")
         if self.reset_hotkey:
-            self._toast(f"拖动 · 右下角缩放 · 复位 {self.reset_hotkey}", 8)
+            message = f"拖动 · 右下角缩放 · 复位 {self.reset_hotkey}"
+            if self.quit_hotkey:
+                message += f" · 退出 {self.quit_hotkey}"
+            self._toast(message, 8)
         else:
             self._toast("拖动 · 右下角缩放（复位快捷键被占用）", 8)
-        self._redraw()
-            self._toast(f"就绪 · 复位 {self.reset_hotkey}"
-                        + (f" · 退出 {self.quit_hotkey}" if self.quit_hotkey else ""), 5)
-        else:
-            self._toast("复位快捷键被占用：穿透 10 秒后会自动解除", 6)
         self._redraw()
         msg = MSG()
         while user32.GetMessageW(ctypes.byref(msg), None, 0, 0) > 0:

@@ -15,11 +15,18 @@ Windows 版的「手机小组件」：三张半透明圆角卡片飘在桌面上
 
 ## 跑起来
 
-双击 **`启动浮窗.bat`** 即可（它会用 Codex 自带的 Python 在后台启动，不弹黑框）。
-如果双击后没反应，改用 **`诊断模式.bat`**：它会带着控制台窗口跑，报错信息直接显示出来，
-窗口关掉浮窗就跟着关。
+双击 **`启动浮窗.bat`** 即可。启动器会自动寻找本机可用的 Python，并检查唯一的第三方
+依赖 Pillow；如果没装，会先自动执行 `pip install pillow`（只装一次），再用 pythonw
+在后台拉起浮窗，不弹黑框。
 
-命令行也可以：`python widget.py`；只想看外观不开窗：`python widget.py --preview preview.png`
+也可以手动安装依赖：
+
+```powershell
+python -m pip install -r requirements.txt
+```
+
+如果双击后没反应，在命令行运行 `python widget.py`，控制台会直接显示报错。
+只想看外观不开窗：`python widget.py --preview preview.png`
 
 > 注意：`.bat` 必须是 **CRLF 换行**。cmd 解析 LF 换行的批处理会错位，
 > 表现为双击一闪而过、什么都不发生（这个坑踩过）。
@@ -34,7 +41,7 @@ Windows 版的「手机小组件」：三张半透明圆角卡片飘在桌面上
 
 再点一次快捷方式不会开出第二个浮窗 —— 已经开着就把已有的叫到前台来（单实例）。
 
-备用启动方式：`启动浮窗.bat`（常规）、`启动.vbs`（一行版，快捷方式失效时用）。
+备用启动方式：在命令行运行 `python widget.py`（快捷方式失效时用）。
 
 ## 调整大小
 
@@ -103,7 +110,7 @@ Windows 版的「手机小组件」：三张半透明圆角卡片飘在桌面上
 默认 `auto`：中国气象局 → 和风天气 → Open-Meteo。想固定用某一个，改
 `config.json` 里的 `weather.source`（写 `cma` / `qweather` / `open-meteo`）。
 
-不确定哪条路能通，就双击 **`检测天气源.bat`**，它会三个源挨个试一遍并打印结果。
+不确定哪条路能通，就运行 `python widget.py --probe`，它会三个源挨个试一遍并打印结果。
 
 **城市编码**：`weather.cma_city_id`，杭州是 `101210101`，和风天气用的是同一套
 LocationID，所以填一次两边都认。换城市可以去中国天气网搜到对应编号。
