@@ -2,7 +2,7 @@
   "generated": "2026-11-14",
   "files": {
     "apps/README.md": "1a4fd13dfb2625dc100fdf2c2c5d6a60666b450279b3c299633b4ed730f5729d",
-    "apps/check-update.ps1": "b94fa43624f4ae6f9d9e55a816745829413d712f18af1b5fed40a786fe659688",
+    "apps/check-update.ps1": "d195e6d50ebd68ec2b49ed6f7d6541761f8cc41329fe3d2cb588e0ac823361d4",
     "apps/codex-portable/.gitignore": "b274c976098d563fdbe83f355fc7a851ce0bb36ccbc8b117aac896f8fc955702",
     "apps/codex-portable/LICENSE": "652970d6a1ea9d9652e3a77b19204ae7d337263cde8249f0526b9a3261740f77",
     "apps/codex-portable/README.md": "be471346247d318a6c29e02d20776d639cf9be6ae242178f1aa0c21b92722c62",
@@ -124,7 +124,7 @@
     "apps/raw-to-jpg/src/app.manifest": "373bc05c67fe742b46f71d82820eae2b5d80440b6d58a14d3af19341c135df84",
     "apps/raw-to-jpg/tests/ConversionCoreTests.cs": "f30685a96454ba4a1ddd15bbcdf581893fb46e56ae1b54099097f754ffcbd45b",
     "apps/raw-to-jpg/tools/make_icon.py": "007b3354bd2a33cbe657a0d87d34d49bdc8c63b0cd9c9881b74928f5abb52497",
-    "apps/release-notes.md": "956d36f81cfb8febdc5039a5965c2f7b6dcc79856eabbc95fbe6282f110b8880",
+    "apps/release-notes.md": "c5d306b864b66060b34bb4cee0c2af9ac284aa0dd5515bbc7e083ae890605968",
     "apps/tech-pulse/.gitignore": "fd37286d0c66e6734e0b56d09ed9a6b6ece466087e7552e2ed3ef8349d4a3cb4",
     "apps/tech-pulse/README.md": "d1c79f4197a704c368fae2e6f4460810daefe895b50254c3f857fe46a60ea0f9",
     "apps/tech-pulse/build-exe.mjs": "c224b95fe412f4034c3da89f28f9cb10468f77590d23996265e866a62ddf2180",

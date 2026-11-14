@@ -41,13 +41,42 @@ if (-not $Root -or -not (Test-Path -LiteralPath $Root -PathType Container)) {
     exit 1
 }
 
+# 用 HttpClient 而不是 Invoke-WebRequest：后者在连接卡住时可能挂几分钟，
+# 更新器要让用户看到明确结果而不是像死机。
+$script:HttpClient = $null
+function Get-UrlBytes([string]$url, [int]$timeoutSec = 25) {
+    for ($attempt = 1; $attempt -le 2; $attempt++) {
+        try {
+            if (-not $script:HttpClient) {
+                try { Add-Type -AssemblyName System.Net.Http -ErrorAction SilentlyContinue } catch { }
+                $handler = New-Object System.Net.Http.HttpClientHandler
+                $handler.AllowAutoRedirect = $true
+                $client = New-Object System.Net.Http.HttpClient($handler)
+                $client.Timeout = [TimeSpan]::FromSeconds(25)
+                try { $client.DefaultRequestHeaders.UserAgent.ParseAdd('diy-apps-updater') } catch { }
+                $script:HttpClient = $client
+            }
+            $task = $script:HttpClient.GetAsync($url)
+            if (-not $task.Wait([TimeSpan]::FromSeconds($timeoutSec + 5))) { continue }
+            $resp = $task.Result
+            if (-not $resp.IsSuccessStatusCode) { return $null }
+            $bodyTask = $resp.Content.ReadAsByteArrayAsync()
+            if (-not $bodyTask.Wait([TimeSpan]::FromSeconds($timeoutSec))) { continue }
+            return ,$bodyTask.Result
+        } catch { continue }
+    }
+    return $null
+}
+
 function Resolve-Ref {
     param([string]$Wanted)
     if ($Wanted) { return $Wanted }
     try {
-        $release = Invoke-RestMethod -Uri "https://api.github.com/repos/$Repo/releases/latest" `
-            -Headers @{ 'User-Agent' = 'diy-apps-updater' } -TimeoutSec 25
-        if ($release -and $release.tag_name) { return [string]$release.tag_name }
+        $bytes = Get-UrlBytes "https://api.github.com/repos/$Repo/releases/latest"
+        if ($bytes) {
+            $release = [Text.Encoding]::UTF8.GetString($bytes) | ConvertFrom-Json
+            if ($release -and $release.tag_name) { return [string]$release.tag_name }
+        }
     } catch { }
     $versionFile = Join-Path $Root 'VERSION'
     if (Test-Path -LiteralPath $versionFile) {
@@ -68,20 +97,15 @@ $rawBase = "https://raw.githubusercontent.com/$Repo/$resolvedRef"
 $apiBase = "https://api.github.com/repos/$Repo/contents"
 
 function Get-RemoteBytes([string]$rel) {
-    try {
-        $resp = Invoke-WebRequest -Uri "$rawBase/$rel" -UseBasicParsing -TimeoutSec 30
-        if ($resp.StatusCode -eq 200) {
-            # 用原始字节流，避免把 ico/png/exe 当文本写入后损坏
-            if ($null -ne $resp.RawContentStream) { return $resp.RawContentStream.ToArray() }
-            if ($resp.Content -is [byte[]]) { return $resp.Content }
-            return [Text.Encoding]::UTF8.GetBytes([string]$resp.Content)
-        }
-    } catch { }
-    try {
-        $api = Invoke-RestMethod -Uri "$apiBase/$rel`?ref=$resolvedRef" `
-            -Headers @{ 'User-Agent' = 'diy-apps-updater' } -TimeoutSec 30
-        if ($api.content) { return [Convert]::FromBase64String(($api.content -replace '\s', '')) }
-    } catch { }
+    $bytes = Get-UrlBytes "$rawBase/$rel"
+    if ($bytes) { return $bytes }
+    $apiBytes = Get-UrlBytes "$apiBase/$rel`?ref=$resolvedRef"
+    if ($apiBytes) {
+        try {
+            $api = [Text.Encoding]::UTF8.GetString($apiBytes) | ConvertFrom-Json
+            if ($api.content) { return [Convert]::FromBase64String(($api.content -replace '\s', '')) }
+        } catch { }
+    }
     return $null
 }
 
