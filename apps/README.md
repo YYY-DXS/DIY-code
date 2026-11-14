@@ -11,6 +11,8 @@
 | `codex-portable/` | Codex 环境搬运 | 把 Codex 工作环境打包搬到新电脑 | `codex-portable.cmd` |
 | `raw-to-jpg/` | RAW 转 JPG | 批量把 ARW 等 RAW 转成 JPG 的桌面工具 | `build.ps1` 编译后运行 |
 | `dsh-plugin-pulse/` | DSH 插件脉冲面板 | 可视化安装 / 卸载 DSH 插件并做兼容性诊断 | 双击 `启动脉冲面板.cmd` |
+| `lumen-translate/` | Lumen 译 | 划词 / 截图翻译，在线线路 + AI 引擎双通道 | 双击 `run.cmd` 或 `main.pyw` |
+| `hanhua-kit/` | 汉化工具 | 通用软件汉化流水线：提取、翻译、占位符保护、回写 | `python -m hanhua --help` |
 
 ## 依赖说明
 
@@ -18,6 +20,19 @@
 - `tech-pulse`：源码运行需要 Node.js 20+；打包 exe 需要先 `npm install`，再 `npm run build:exe`。
 - `raw-to-jpg`：使用 Windows 自带 .NET Framework 4.x 编译器，无需第三方运行库。
 - `dsh-plugin-pulse`：源码运行需要 Python 3 + Tkinter；也可以先 `build.ps1` 打包。
+- `lumen-translate`：纯标准库 + Tkinter，无需 pip 安装；`run.cmd` 会自动找可用的 Python 运行时。
+- `hanhua-kit`：需要 Python 3.10+；`pip install -e .` 后可用 `python -m hanhua`。
+
+## 快捷方式
+
+如果桌面 / 开始菜单快捷方式丢失，或指向了旧的 codex 输出目录，运行：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\fix-shortcuts.ps1
+```
+
+它会重建科技脉冲、桌面小组件、电脑管家、Codex 环境搬运、RAW 转 JPG、DSH 插件面板、
+DeepSeek Hub 面板的桌面与开始菜单快捷方式，并修复对应的开机启动项。
 
 ## 自动更新
 
@@ -33,5 +48,5 @@
 ## 说明
 
 - 这些目录最初是从 Codex 会话日志里的补丁**重放重建**的，个别功能可能和原版有细微差别。
-- v2.0.0 已修复会阻止启动的问题：科技脉冲缺入口页、桌面小组件启动缩进、RAW 转 JPG 重复字段。
+- v2.0.1 已补齐 Lumen 译与汉化工具；v2.0.0 修复了会阻止启动的问题：科技脉冲缺入口页、桌面小组件启动缩进、RAW 转 JPG 重复字段。
 - `desktop-widget/config.json` 里 API Key 是空的，用之前自己填。

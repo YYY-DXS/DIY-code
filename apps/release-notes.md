@@ -1,8 +1,16 @@
-# DIY 软件合集 v2.0.0
+# DIY 软件合集 v2.0.1
 
-本次发行把仓库里所有可独立分发的软件打成 12 个 zip：6 个 Windows 桌面工具、4 个 DSH
+本次发行把仓库里所有可独立分发的软件打成 14 个 zip：8 个 Windows 桌面工具、4 个 DSH
 宿主插件、1 个生成器、1 个工具集。每个包解压即用（个别需要 Node / Python / DSH 运行时，
 见各包 README）。
+
+## v2.0.1 新增
+
+- **Lumen 译**（`lumen-translate.zip`）：划词 / 截图翻译桌面工具。选中即译、全局快捷键、
+  系统托盘、在线三线路自动降级、OpenAI 兼容 AI 引擎；纯标准库 + Tkinter，无需 pip 安装。
+- **汉化工具**（`hanhua-kit.zip`）：通用软件汉化流水线，支持 JSON / PO / RESX / Android
+  strings.xml，带占位符保护、翻译记忆与质量检查。
+- 同步更新 `manifest.json`，两个新包可通过 `apps/更新所有软件.cmd` 自动补齐。
 
 ## v2.0.0 更新
 
@@ -24,6 +32,8 @@
 | `codex-portable.zip` | 桌面工具 | 解压后运行 `codex-portable.cmd`，打包 / 还原 Codex 工作环境 |
 | `raw-to-jpg.zip` | 桌面工具 | 解压后运行 `build.ps1` 编译出 `RAW转JPG.exe`，批量把 RAW 转 JPG |
 | `dsh-plugin-pulse.zip` | 桌面工具 | 解压后双击 `启动脉冲面板.cmd`，安装 / 卸载 / 诊断 DSH 插件 |
+| `lumen-translate.zip` | 桌面工具 | 解压后双击 `run.cmd`，划词 / 截图翻译，在线 + AI 双引擎 |
+| `hanhua-kit.zip` | 桌面工具 | 解压后 `pip install -e .`，用 `python -m hanhua` 走汉化流水线 |
 | `deepseek-hub.zip` | DSH 插件 | 同步 DeepSeek 网页会话到本地 Markdown，并提供 GitHub 发布入口 |
 | `media-studio.zip` | DSH 插件 | 驱动本机 FilmCraft / EffectCraft / PhotoCraft / LightCraft |
 | `query-bridge.zip` | DSH 插件 | 查询 GitHub 仓库状态、DeepSeek 余额、历史会话 |
@@ -40,4 +50,4 @@
 ## 说明
 
 这批代码最初是从 Codex 会话记录里的补丁重放重建的，个别功能可能与最初版本有细微差别。
-v2.0.0 已修复已知的启动阻断问题；发现问题请开 Issue。
+v2.0.1 已修复已知的启动阻断问题；发现问题请开 Issue。

@@ -4,7 +4,7 @@
 
 ## 下载
 
-最新发行版：[v2.0.0](https://github.com/YYY-DXS/DIY-code/releases/tag/v2.0.0)
+最新发行版：[v2.0.1](https://github.com/YYY-DXS/DIY-code/releases/tag/v2.0.1)
 
 每个软件一个 zip，解压即用；`SHA256SUMS.txt` 可核对下载完整性。
 
@@ -12,13 +12,13 @@
 
 | 目录 | 说明 |
 | --- | --- |
-| [`apps/`](apps/README.md) | 独立 Windows 桌面工具（科技脉冲、桌面小组件、电脑管家、Codex 环境搬运、RAW 转 JPG、DSH 插件脉冲面板） |
+| [`apps/`](apps/README.md) | 独立 Windows 桌面工具（科技脉冲、桌面小组件、电脑管家、Codex 环境搬运、RAW 转 JPG、DSH 插件脉冲面板、Lumen 译、汉化工具） |
 | [`plugins/`](plugins/README.md) | DeepSeek Harness 宿主插件（DeepSeek Hub、Media Studio、Query Bridge、Codex History Bridge） |
 | [`extras/`](extras/README.md) | 单独发布的生成器与脚本（高中政治思维导图） |
 | [`projects/`](projects/README.md) | 各个 DIY 项目的资料（齐柏林飞艇、外骨骼、台历、航模方向） |
 | [`tools/`](tools/README.md) | 配套工具：DeepSeek 记录同步、Git 同步、隐私检查、Markdown 转换 |
 
-## 本次 v2.0.0 收录
+## 本次 v2.0.1 收录
 
 | 包 | 类型 | 用途 |
 | --- | --- | --- |
@@ -27,6 +27,8 @@
 | `tech-pulse.zip` | 桌面工具 | 每日科技新闻 + DIY 项目聚合 |
 | `codex-portable.zip` | 桌面工具 | Codex 工作环境盘点、打包、还原与加密 |
 | `raw-to-jpg.zip` | 桌面工具 | 批量 RAW / 图片转 JPG（附 C# 源码） |
+| `lumen-translate.zip` | 桌面工具 | 划词 / 截图翻译（在线线路 + OpenAI 兼容 AI 引擎） |
+| `hanhua-kit.zip` | 桌面工具 | 通用软件汉化流水线（提取、翻译、占位符保护、回写） |
 | `deepseek-hub.zip` | DSH 插件 | DeepSeek 网页会话同步成本地知识库 + GitHub 发布 |
 | `media-studio.zip` | DSH 插件 | 驱动本机 FilmCraft / EffectCraft / PhotoCraft / LightCraft |
 | `query-bridge.zip` | DSH 插件 | 查询 GitHub 状态、DeepSeek 余额、历史会话 |

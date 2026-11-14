@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+*.sqlite
+out/
+work/
+*.bak
+.demo-run/
+.recon/

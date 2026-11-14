@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 应用名与主要操作 -->
+    <string name="app_name">Nimbus Backup</string>
+    <string name="action_restore">Restore</string>
+    <string name="action_verify">Verify</string>
+
+    <!-- 带占位符的文案 -->
+    <string name="welcome_message">Welcome back, {user}!</string>
+    <string name="repo_size">&lt;b&gt;%1$s&lt;/b&gt; used of %2$s</string>
+    <string name="error_no_space">Not enough space on %1$s. Free at least %2$s.</string>
+
+    <string name="settings_title">Settings</string>
+    <string name="api_endpoint" translatable="false">https://api.example.com/v1</string>
+</resources>

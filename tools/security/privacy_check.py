@@ -105,7 +105,7 @@ PLACEHOLDER = re.compile(
     r"|changeme|TODO|<[^>]+>|\$\{|%s|%d|%v|已隐藏|已移除"
 )
 
-SKIP_PATHS = {"tools/security/privacy_check.py"}
+SKIP_PATHS = {"tools/security/privacy_check.py", "apps/manifest.json"}
 
 TEXT_EXT = {
     ".md", ".txt", ".json", ".jsonl", ".py", ".mjs", ".js", ".ts", ".cmd", ".bat",

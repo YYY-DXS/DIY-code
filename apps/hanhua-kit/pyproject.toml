@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hanhua"
+version = "0.1.0"
+description = "通用软件汉化流水线：提取 -> 保护 -> 翻译 -> 校验 -> 回写"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.scripts]
+hanhua = "hanhua.cli:main"
+
+[tool.setuptools]
+packages = ["hanhua"]

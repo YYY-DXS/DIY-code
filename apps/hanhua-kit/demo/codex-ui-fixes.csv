@@ -1,0 +1,5 @@
+key,source,target
+"sidebarElectron.usageAlert.cadence.day","{days, plural, one {every day} other {every {days} days}}","{days, plural, one {每天} other {每 {days} 天}}"
+"sidebarElectron.usageAlert.cadence.hour","{hours, plural, one {every hour} other {every {hours} hours}}","{hours, plural, one {每小时} other {每 {hours} 小时}}"
+"sidebarElectron.usageAlert.cadence.minute","{minutes, plural, one {every minute} other {every {minutes} minutes}}","{minutes, plural, one {每分钟} other {每 {minutes} 分钟}}"
+"sidebarElectron.usageAlert.cadence.week","{weeks, plural, one {every week} other {every {weeks} weeks}}","{weeks, plural, one {每周} other {每 {weeks} 周}}"

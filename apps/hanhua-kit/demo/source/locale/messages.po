@@ -1,0 +1,30 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: nimbus-backup 3.4\n"
+"Language: en_US\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: src/backup.py:120
+msgid "Snapshot created"
+msgstr ""
+
+#: src/backup.py:135
+msgid "Restoring files from snapshot {snapshot_id}"
+msgstr ""
+
+#: src/verify.py:44
+msgid "Verify repository"
+msgstr ""
+
+#: src/verify.py:60
+#, python-format
+msgid "%s of %s chunks verified"
+msgstr ""
+
+#: src/ui.py:88
+msgid "Delete {count} snapshot"
+msgid_plural "Delete {count} snapshots"
+msgstr[0] ""
+msgstr[1] ""

@@ -1,0 +1,40 @@
+{
+  "app": {
+    "name": "Nimbus Backup",
+    "tagline": "Protect what matters, automatically."
+  },
+  "menu": {
+    "file": {
+      "new": "New Backup Job",
+      "open": "Open Repository",
+      "exit": "Exit"
+    },
+    "help": {
+      "about": "About Nimbus Backup",
+      "docs": "Open Documentation",
+      "check": "Check for Updates"
+    }
+  },
+  "status": {
+    "idle": "Idle",
+    "running": "Backing up {count} of {total} files...",
+    "done": "Backup completed in {0}.",
+    "failed": "Backup failed: {error}",
+    "verify": "Verifying <b>snapshot</b> integrity"
+  },
+  "dialog": {
+    "confirm_delete": "Delete snapshot \"{name}\"? This cannot be undone.",
+    "password_prompt": "Enter the repository password to continue.",
+    "low_space": "Only {free} free on {drive}. Continue?"
+  },
+  "settings": {
+    "compression": "Compression level",
+    "schedule": "Schedule",
+    "encrypt": "Encrypt backups",
+    "cloud": "Upload to cloud storage",
+    "parallel": "Parallel transfers",
+    "language": "Interface language",
+    "release_notes_url": "https://example.com/notes",
+    "build_id": "app_build_2026"
+  }
+}
