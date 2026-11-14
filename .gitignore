@@ -19,3 +19,8 @@ tools/security/fix-log.txt
 # Python 缓存，自动推送时不要带上
 __pycache__/
 *.pyc
+
+# 桌面小组件的本机配置（含 API Key、窗口位置）只留在本机
+apps/desktop-widget/config.json
+apps/desktop-widget/balance_history.json
+apps/desktop-widget/api.txt
