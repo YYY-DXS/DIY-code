@@ -1,8 +1,14 @@
-# DIY 软件合集 v2.0.1
+# DIY 软件合集 v2.0.2
 
 本次发行把仓库里所有可独立分发的软件打成 14 个 zip：8 个 Windows 桌面工具、4 个 DSH
 宿主插件、1 个生成器、1 个工具集。每个包解压即用（个别需要 Node / Python / DSH 运行时，
 见各包 README）。
+
+## v2.0.2 修复
+
+- **汉化工具**：`tools/codex-zh-cn.ps1` 补回 UTF-8 BOM。少了 BOM 时 Windows PowerShell 5.1
+  会把中文当 ANSI 解析，脚本直接报语法错误。
+- 同步更新 `manifest.json`。
 
 ## v2.0.1 新增
 

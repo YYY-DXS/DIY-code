@@ -32,7 +32,7 @@ powershell -ExecutionPolicy Bypass -File .\fix-shortcuts.ps1
 ```
 
 它会重建科技脉冲、桌面小组件、电脑管家、Codex 环境搬运、RAW 转 JPG、DSH 插件面板、
-DeepSeek Hub 面板的桌面与开始菜单快捷方式，并修复对应的开机启动项。
+DeepSeek Hub 面板、Lumen 译、汉化工具的桌面与开始菜单快捷方式，并修复对应的开机启动项。
 
 ## 自动更新
 
