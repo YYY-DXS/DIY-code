@@ -89,7 +89,8 @@ $ctlNames = @(
     'PageOrganize', 'ChkDownloads', 'ChkDesktop', 'ChkDocuments', 'ChkCustom', 'BtnBrowse', 'TxtCustomPath',
     'CmbLayout', 'TxtMinAge', 'BtnPreviewOrganize', 'BtnApplyOrganize', 'BtnUndoOrganize',
     'PageClean', 'ChkCleanBrowser', 'ChkCleanRecycle', 'ChkCleanUpdate', 'ChkCleanWinSxS',
-    'BtnPreviewClean', 'BtnApplyClean',
+    'ChkCleanDeep', 'ChkPrivacyBrowser', 'ChkPrivacyWindows', 'ChkSecure',
+    'BtnPreviewClean', 'BtnApplyClean', 'BtnPrivacyScan', 'BtnWipeFree',
     'PageRepair', 'BtnRestorePoint', 'BtnEnvRepair', 'BtnSysRepair', 'BtnRuntime',
     'BtnNetRepair', 'BtnUpdateRepair', 'BtnIconRepair', 'BtnDiskCheck', 'BtnFullRepair',
     'PageFind', 'ChkRecurse', 'TxtMinSizeKB', 'TxtMinMB', 'BtnFindDup', 'BtnMoveDup', 'BtnFindLarge',
@@ -261,7 +262,7 @@ function New-EngineScript {
     param([hashtable]$Parameters, [string]$Body)
     $sb = New-Object System.Text.StringBuilder
     [void]$sb.AppendLine('$ErrorActionPreference = ''Continue''')
-    foreach ($m in @('Common', 'Diagnostics', 'Repairs', 'Organize', 'Report')) {
+    foreach ($m in @('Common', 'Diagnostics', 'Repairs', 'Organize', 'Report', 'Privacy')) {
         [void]$sb.AppendLine((". '{0}\{1}.ps1'" -f $script:ModuleDir, $m))
     }
     [void]$sb.AppendLine('$script:AssumeYes = $true')
@@ -493,7 +494,31 @@ Write-Host '##RESULT##|organizeUndo=done'
 
 $BodyClean = @'
 $null = Clear-TempFiles -Apply:$param_Apply -IncludeBrowserCache:$param_Browser -IncludeRecycleBin:$param_Recycle -IncludeUpdateCache:$param_UpdateCache -IncludeWinSxS:$param_WinSxS
+if ($param_DeepJunk) {
+    $null = Clear-DeepJunk -Apply:$param_Apply -IncludeAdvanced
+}
+if ($param_PrivacyBrowser -or $param_PrivacyWindows) {
+    $null = Clear-PrivacyTraces -Apply:$param_Apply -IncludeBrowser:$param_PrivacyBrowser -IncludeWindows:$param_PrivacyWindows -Secure:$param_Secure
+}
 Write-Host '##RESULT##|clean=done'
+'@
+
+$BodyPrivacyScan = @'
+$r = Get-PrivacyReport -IncludeBrowser -IncludeWindows
+foreach ($item in $r.Items) {
+    if (-not $item.Exists) { continue }
+    $risk = ''
+    if ($item.Risky) { $risk = '（可能退出登录）' }
+    Write-Info ("{0}：{1}（{2} 项）{3}" -f $item.Name, (Format-Bytes $item.Bytes), $item.Items, $risk)
+}
+Write-Host ''
+Write-Host ('隐私痕迹合计：' + (Format-Bytes $r.TotalBytes) + '（' + $r.TotalItems + ' 项）')
+Write-Host '##RESULT##|privacyScan=done'
+'@
+
+$BodyWipeFree = @'
+$null = Invoke-FreeSpaceWipe -Drive $param_Drive
+Write-Host '##RESULT##|wipeFree=done'
 '@
 
 $BodyRestorePoint = @'
@@ -770,6 +795,10 @@ $script:Ctl['BtnPreviewClean'].add_Click({
             param_Recycle     = $false
             param_UpdateCache = ($script:Ctl['ChkCleanUpdate'].IsChecked -eq $true)
             param_WinSxS      = $false
+            param_DeepJunk    = ($script:Ctl['ChkCleanDeep'].IsChecked -eq $true)
+            param_PrivacyBrowser = ($script:Ctl['ChkPrivacyBrowser'].IsChecked -eq $true)
+            param_PrivacyWindows = ($script:Ctl['ChkPrivacyWindows'].IsChecked -eq $true)
+            param_Secure      = $false
         }
     } 'BtnPreviewClean'
 })
@@ -780,6 +809,10 @@ $script:Ctl['BtnApplyClean'].add_Click({
         $update  = ($script:Ctl['ChkCleanUpdate'].IsChecked -eq $true)
         $recycle = ($script:Ctl['ChkCleanRecycle'].IsChecked -eq $true)
         $sxS     = ($script:Ctl['ChkCleanWinSxS'].IsChecked -eq $true)
+        $deep    = ($script:Ctl['ChkCleanDeep'].IsChecked -eq $true)
+        $privB   = ($script:Ctl['ChkPrivacyBrowser'].IsChecked -eq $true)
+        $privW   = ($script:Ctl['ChkPrivacyWindows'].IsChecked -eq $true)
+        $secure  = ($script:Ctl['ChkSecure'].IsChecked -eq $true)
 
         $lines = New-Object System.Collections.ArrayList
         [void]$lines.Add('· 临时文件、错误报告、崩溃转储')
@@ -787,7 +820,11 @@ $script:Ctl['BtnApplyClean'].add_Click({
         if ($update)  { [void]$lines.Add('· Windows 更新下载缓存') }
         if ($recycle) { [void]$lines.Add('· 回收站（清空后无法恢复！）') }
         if ($sxS)     { [void]$lines.Add('· 系统组件仓库 WinSxS（较慢）') }
-        $msg = "将要清理：`n" + ($lines -join "`n") + "`n`n正在被程序占用的文件会自动跳过，不会硬删。`n`n确定开始清理吗？"
+        if ($deep)    { [void]$lines.Add('· 深度垃圾（日志 / 转储 / 缩略图 / Windows.old）') }
+        if ($privB)   { [void]$lines.Add('· 浏览器历史 / Cookie / 站点数据（会退出部分网站登录）') }
+        if ($privW)   { [void]$lines.Add('· Windows 最近记录 / 跳转列表 / 运行历史 / DNS / 剪贴板') }
+        if ($secure)  { [void]$lines.Add('· 安全擦除：删除前随机覆写（较慢）') }
+        $msg = "将要清理：`n" + ($lines -join "`n") + "`n`n隐私痕迹清理后无法恢复；浏览器正在运行时会自动跳过浏览器部分。`n正在被程序占用的文件会自动跳过，不会硬删。`n`n确定开始清理吗？"
         if (-not (Show-GuiConfirm $msg '执行清理')) { Add-LogLine '已取消清理。' 'WARN'; return }
 
         if ($sxS -and -not (Test-IsAdminNow)) {
@@ -799,8 +836,28 @@ $script:Ctl['BtnApplyClean'].add_Click({
             param_Recycle     = $recycle
             param_UpdateCache = $update
             param_WinSxS      = $sxS
+            param_DeepJunk    = $deep
+            param_PrivacyBrowser = $privB
+            param_PrivacyWindows = $privW
+            param_Secure      = $secure
         } -RepairTask:$sxS
     } 'BtnApplyClean'
+})
+
+# ================================================================ 事件绑定：隐私清理
+$script:Ctl['BtnPrivacyScan'].add_Click({
+    Invoke-Ui {
+        Start-EngineTask -Title '扫描隐私痕迹' -Body $BodyPrivacyScan
+    } 'BtnPrivacyScan'
+})
+
+$script:Ctl['BtnWipeFree'].add_Click({
+    Invoke-Ui {
+        if (-not (Test-AdminReady '擦除空闲空间需要管理员权限。')) { return }
+        $msg = "将用 cipher /w 擦除 $env:SystemDrive 空闲空间。`n`n这会把已删除文件在磁盘上的残留数据覆写掉（PrivaZer 效果），可能耗时几十分钟，期间可以继续用电脑。`n`n确定开始吗？"
+        if (-not (Show-GuiConfirm $msg '擦除空闲空间')) { return }
+        Start-EngineTask -Title '擦除空闲空间' -Body $BodyWipeFree -Parameters @{ param_Drive = $env:SystemDrive } -RepairTask:$true
+    } 'BtnWipeFree'
 })
 
 # ================================================================ 事件绑定：修复

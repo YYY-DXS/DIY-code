@@ -349,7 +349,7 @@
             <StackPanel x:Name="PageClean" Visibility="Collapsed">
               <TextBlock Text="垃圾清理" Style="{StaticResource PageTitle}"/>
               <TextBlock Style="{StaticResource PageDesc}"
-                         Text="只删临时文件、缓存、错误报告和崩溃转储。正在被程序占用的文件会自动跳过，不会硬删，你的文档和下载的文件不会被碰。"/>
+                         Text="只删临时文件、缓存、错误报告和崩溃转储。正在被程序占用的文件会自动跳过，不会硬删，你的文档和下载的文件不会被碰。下面的「深度与隐私」可以进一步清理日志、转储、浏览器痕迹和 Windows 使用记录。"/>
 
               <TextBlock Text="清理项目" Style="{StaticResource SubTitle}"/>
               <WrapPanel>
@@ -364,6 +364,20 @@
               <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                 <Button x:Name="BtnPreviewClean" Content="预览可清理体积" Style="{StaticResource PrimaryButton}"/>
                 <Button x:Name="BtnApplyClean" Content="执行清理" Style="{StaticResource SecondaryButton}"/>
+              </StackPanel>
+
+              <TextBlock Text="深度与隐私（PrivaZer 风格）" Style="{StaticResource SubTitle}"/>
+              <WrapPanel>
+                <CheckBox x:Name="ChkCleanDeep" Content="深度垃圾（日志 / 转储 / 缩略图 / 传递优化 / Windows.old）" Style="{StaticResource MyCheckBox}"/>
+                <CheckBox x:Name="ChkPrivacyBrowser" Content="浏览器历史 / Cookie / 站点数据（可能退出登录）" Style="{StaticResource MyCheckBox}"/>
+                <CheckBox x:Name="ChkPrivacyWindows" Content="Windows 最近记录 / 跳转列表 / 运行历史 / DNS / 剪贴板" Style="{StaticResource MyCheckBox}"/>
+                <CheckBox x:Name="ChkSecure" Content="安全擦除（删除前随机覆写，较慢）" Style="{StaticResource MyCheckBox}"/>
+              </WrapPanel>
+              <TextBlock Style="{StaticResource PageDesc}" Margin="0,6,0,0"
+                         Text="隐私清理不可恢复；浏览器正在运行时会自动跳过浏览器部分。安全擦除会先用随机数据覆写文件，速度明显变慢。"/>
+              <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                <Button x:Name="BtnPrivacyScan" Content="只扫描隐私痕迹" Style="{StaticResource SecondaryButton}"/>
+                <Button x:Name="BtnWipeFree" Content="擦除空闲空间（cipher）" Style="{StaticResource SecondaryButton}"/>
               </StackPanel>
             </StackPanel>
 

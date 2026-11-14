@@ -57,7 +57,10 @@ if ($techPulse) {
 $widgetScript = Join-Path $repo 'apps\desktop-widget\launch-widget.ps1'
 if (Test-Path -LiteralPath $widgetScript) {
   $widgetArgs = '-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "' + $widgetScript + '"'
-  Save-App '桌面小组件' $powershell $widgetArgs (Split-Path -Parent $widgetScript) "$powershell,0" '天气 / DeepSeek 余额 / 系统资源浮窗'
+  $widgetIcon = "$powershell,0"
+  $widgetIconPath = Join-Path $repo 'apps\desktop-widget\assets\app.ico'
+  if (Test-Path -LiteralPath $widgetIconPath) { $widgetIcon = "$widgetIconPath,0" }
+  Save-App '桌面小组件' $powershell $widgetArgs (Split-Path -Parent $widgetScript) $widgetIcon '天气 / DeepSeek 余额 / 系统资源浮窗'
 } else {
   Write-Warning '找不到 desktop-widget\launch-widget.ps1'
 }
@@ -77,7 +80,10 @@ if (Test-Path -LiteralPath $pcScript) {
 # Codex 环境搬运
 $codexCmd = Join-Path $repo 'apps\codex-portable\codex-portable.cmd'
 if (Test-Path -LiteralPath $codexCmd) {
-  Save-App 'Codex 环境搬运' $codexCmd '' (Split-Path -Parent $codexCmd) "$env:SystemRoot\System32\cmd.exe,0" 'Codex 工作环境盘点 / 打包 / 还原'
+  $codexIcon = "$env:SystemRoot\System32\cmd.exe,0"
+  $codexIconPath = Join-Path $repo 'apps\codex-portable\assets\app.ico'
+  if (Test-Path -LiteralPath $codexIconPath) { $codexIcon = "$codexIconPath,0" }
+  Save-App 'Codex 环境搬运' $codexCmd '' (Split-Path -Parent $codexCmd) $codexIcon 'Codex 工作环境盘点 / 打包 / 还原'
 } else {
   Write-Warning '找不到 codex-portable.cmd'
 }
@@ -151,7 +157,10 @@ if ((Test-Path -LiteralPath $lumenEntry) -and $lumenPy) {
 # 汉化工具（命令行）
 $hanhuaCmd = Join-Path $repo 'apps\hanhua-kit\run.cmd'
 if (Test-Path -LiteralPath $hanhuaCmd) {
-  Save-App '汉化工具' $hanhuaCmd '' (Split-Path -Parent $hanhuaCmd) "$env:SystemRoot\System32\cmd.exe,0" '通用软件汉化流水线（命令行）'
+  $hanhuaIcon = "$env:SystemRoot\System32\cmd.exe,0"
+  $hanhuaIconPath = Join-Path $repo 'apps\hanhua-kit\assets\app.ico'
+  if (Test-Path -LiteralPath $hanhuaIconPath) { $hanhuaIcon = "$hanhuaIconPath,0" }
+  Save-App '汉化工具' $hanhuaCmd '' (Split-Path -Parent $hanhuaCmd) $hanhuaIcon '通用软件汉化流水线（命令行）'
 } else {
   Write-Warning '找不到 hanhua-kit\run.cmd'
 }
@@ -169,7 +178,8 @@ if (Test-Path -LiteralPath $widgetScript) {
 Dim sh
 Set sh = CreateObject("WScript.Shell")
 sh.Run "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File ""__SCRIPT__""", 0, False
-'@.Replace('__SCRIPT__', $widgetScript)
+'@
+  $widgetVbs = $widgetVbs.Replace('__SCRIPT__', $widgetScript)
   Set-Content -LiteralPath (Join-Path $startup '桌面小组件.vbs') -Value $widgetVbs -Encoding ASCII
   Write-Host "  [桌面小组件.vbs] $widgetScript"
 }
@@ -186,7 +196,8 @@ backend = "__BACKEND__"
 If Not fso.FileExists(python) Then python = "python"
 If Not fso.FileExists(backend) Then WScript.Quit
 shell.Run """" & python & """ """ & backend & """", 0, False
-'@.Replace('__PYTHON__', $dshPython).Replace('__BACKEND__', $bridgeServer)
+'@
+  $bridgeVbs = $bridgeVbs.Replace('__PYTHON__', $dshPython).Replace('__BACKEND__', $bridgeServer)
   Set-Content -LiteralPath (Join-Path $startup 'DeepSeek同步桥.vbs') -Value $bridgeVbs -Encoding ASCII
   Write-Host "  [DeepSeek同步桥.vbs] $bridgeServer"
 }

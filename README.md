@@ -4,7 +4,7 @@
 
 ## 下载
 
-最新发行版：[v2.0.2](https://github.com/YYY-DXS/DIY-code/releases/tag/v2.0.2)
+最新发行版：[v2.0.3](https://github.com/YYY-DXS/DIY-code/releases/tag/v2.0.3)
 
 每个软件一个 zip，解压即用；`SHA256SUMS.txt` 可核对下载完整性。
 
@@ -18,11 +18,11 @@
 | [`projects/`](projects/README.md) | 各个 DIY 项目的资料（齐柏林飞艇、外骨骼、台历、航模方向） |
 | [`tools/`](tools/README.md) | 配套工具：DeepSeek 记录同步、Git 同步、隐私检查、Markdown 转换 |
 
-## 本次 v2.0.2 收录
+## 本次 v2.0.3 收录
 
 | 包 | 类型 | 用途 |
 | --- | --- | --- |
-| `pc-toolkit.zip` | 桌面工具 | 系统体检 / 环境修复 / 垃圾清理 / 文件整理 |
+| `pc-toolkit.zip` | 桌面工具 | 系统体检 / 环境修复 / 深度垃圾与隐私清理 / 文件整理 |
 | `desktop-widget.zip` | 桌面工具 | 天气 / DeepSeek 余额 / CPU 内存悬浮窗 |
 | `tech-pulse.zip` | 桌面工具 | 每日科技新闻 + DIY 项目聚合 |
 | `codex-portable.zip` | 桌面工具 | Codex 工作环境盘点、打包、还原与加密 |

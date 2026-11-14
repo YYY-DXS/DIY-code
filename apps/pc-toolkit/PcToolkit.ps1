@@ -17,7 +17,7 @@
 
 [CmdletBinding()]
 param(
-    [ValidateSet('Menu', 'Scan', 'QuickScan', 'Report', 'Organize', 'Duplicates', 'Large', 'Clean', 'Repair', 'Undo')]
+    [ValidateSet('Menu', 'Scan', 'QuickScan', 'Report', 'Organize', 'Duplicates', 'Large', 'Clean', 'DeepClean', 'PrivacyScan', 'PrivacyClean', 'WipeFree', 'Repair', 'Undo')]
     [string]$Mode = 'Menu',
 
     # 真正执行改动（不加就是"预览/只读"）
@@ -42,6 +42,11 @@ param(
     [switch]$IncludeRecycleBin,
     [switch]$IncludeUpdateCache,
     [switch]$IncludeWinSxS,
+    [switch]$IncludeAdvanced,
+    [switch]$PrivacyBrowser,
+    [switch]$PrivacyWindows,
+    [switch]$Secure,
+    [string]$Drive = 'C:',
     [switch]$ResetFirewall,
     [switch]$FixDisk,
     [int]$MinMB = 200,
@@ -55,7 +60,7 @@ $ErrorActionPreference = 'Continue'
 
 # ---------------------------------------------------------------- 加载模块
 $moduleDir = Join-Path $PSScriptRoot 'modules'
-foreach ($m in @('Common.ps1', 'Diagnostics.ps1', 'Repairs.ps1', 'Organize.ps1', 'Report.ps1')) {
+foreach ($m in @('Common.ps1', 'Diagnostics.ps1', 'Repairs.ps1', 'Organize.ps1', 'Report.ps1', 'Privacy.ps1')) {
     $p = Join-Path $moduleDir $m
     if (-not (Test-Path -LiteralPath $p)) {
         Write-Host "缺少模块文件：$p" -ForegroundColor Red
@@ -324,6 +329,18 @@ function Invoke-CliMode {
         }
         'Large'     { Invoke-LargeFileScan -Targets (Get-TargetsOrDefault) -MinMB $script:Opt.MinMB | Out-Null }
         'Clean'     { Clear-TempFiles -Apply:$Apply -IncludeBrowserCache:$script:Opt.IncludeBrowserCache -IncludeRecycleBin:$script:Opt.IncludeRecycleBin -IncludeUpdateCache:$script:Opt.IncludeUpdateCache -IncludeWinSxS:$script:Opt.IncludeWinSxS | Out-Null }
+        'DeepClean' { Clear-DeepJunk -Apply:$Apply -IncludeAdvanced:$IncludeAdvanced | Out-Null }
+        'PrivacyScan' {
+            $r = Get-PrivacyReport -IncludeBrowser -IncludeWindows
+            $r.Items | Where-Object { $_.Exists } | Select-Object Name, @{n='MB';e={[math]::Round($_.Bytes/1MB,2)}}, Items | Format-Table -AutoSize
+            Write-Host ('隐私痕迹合计：' + (Format-Bytes $r.TotalBytes) + '（' + $r.TotalItems + ' 项）')
+        }
+        'PrivacyClean' {
+            $incB = $PrivacyBrowser -or (-not $PrivacyBrowser -and -not $PrivacyWindows)
+            $incW = $PrivacyWindows -or (-not $PrivacyBrowser -and -not $PrivacyWindows)
+            Clear-PrivacyTraces -Apply:$Apply -IncludeBrowser:$incB -IncludeWindows:$incW -Secure:$Secure | Out-Null
+        }
+        'WipeFree'  { Invoke-FreeSpaceWipe -Drive $Drive }
         'Repair'    {
             if ($Apply) { Repair-FullRun -Apply | Out-Null }
             else {
