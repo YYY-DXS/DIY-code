@@ -90,6 +90,14 @@ function Test-TextRel([string]$rel) {
     return -not ($ext -in @('.ico', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.exe', '.dll', '.zip', '.pdf', '.woff', '.woff2', '.mp4'))
 }
 
+# 本机数据永远不更新：配置里可能有 API Key，data/ 里有历史和状态。
+# 清单万一混进这些路径，这里必须挡住，不能把用户自己的配置覆盖成默认值。
+function Test-Protected([string]$rel) {
+    if ($rel -match '(^|/)(data|logs?|\.dev)/') { return $true }
+    if ($rel -match '(^|/)(config\.json|api\.txt|balance_history\.json|widget\.log)$') { return $true }
+    return $false
+}
+
 function Get-NormalizedHashBytes([byte[]]$bytes, [string]$rel) {
     if (Test-TextRel $rel) {
         # 本地可能是 CRLF，仓库里是 LF；比较前统一成 LF
@@ -145,10 +153,13 @@ $same = 0
 $missing = 0
 $failed = 0
 $mismatch = 0
+$protected = 0
 
 foreach ($prop in $manifest.files.PSObject.Properties) {
     $rel = [string]$prop.Name
     $want = ([string]$prop.Value).ToLowerInvariant()
+
+    if (Test-Protected $rel) { $protected++; continue }
 
     $target = Resolve-Target $rel
     if (-not $target) { $missing++; continue }
@@ -204,6 +215,9 @@ if ($updated -eq 0 -and $failed -eq 0 -and $mismatch -eq 0) {
 }
 if ($missing -gt 0) {
     Write-Host "未安装而跳过的文件：$missing 个（解压对应软件包后就地再跑一次即可）。" -ForegroundColor DarkGray
+}
+if ($protected -gt 0) {
+    Write-Host "跳过受保护的本机数据：$protected 个（data/、config.json、api.txt 等不会被改动）。" -ForegroundColor DarkGray
 }
 Write-Host ""
 if (-not $NoPause) { Read-Host "按回车关闭" }

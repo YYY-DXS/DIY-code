@@ -24,3 +24,6 @@ __pycache__/
 apps/desktop-widget/config.json
 apps/desktop-widget/balance_history.json
 apps/desktop-widget/api.txt
+
+# Lumen 译的运行时数据（配置可能含 API Key、历史记录）
+apps/lumen-translate/data/

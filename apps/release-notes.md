@@ -1,8 +1,17 @@
-# DIY 软件合集 v2.0.4
+# DIY 软件合集 v2.0.5
 
 本次发行把仓库里所有可独立分发的软件打成 15 个 zip：8 个 Windows 桌面工具、4 个 DSH
 宿主插件、1 个生成器、1 个工具集、1 个更新器。每个包解压即用（个别需要 Node / Python / DSH
 运行时，见各包 README）。
+
+## v2.0.5 修复
+
+- **更新器不再碰本机数据**：v2.0.4 的 `manifest.json` 误收了 `lumen-translate/data/`（配置与
+  历史记录）和 `desktop-widget/balance_history.json`。已安装用户跑一次更新，自己填的 API Key
+  会被覆盖成空。现已把这三项从清单移除、从仓库撤销跟踪并写进 `.gitignore`。
+- **更新器加保护规则**：`check-update.ps1` 现在无条件跳过 `data/`、`logs/`、`.dev/`、
+  `config.json`、`api.txt`、`balance_history.json`、`widget.log`，即使清单再出错也不会覆盖用户配置。
+- v2.0.4 的更新器默认拉最新 Release，所以本版发布后它会自动拿到安全清单。
 
 ## v2.0.4 修复
 
