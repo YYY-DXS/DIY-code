@@ -4,7 +4,7 @@
 
 ## 下载
 
-最新发行版：[v2.0.3](https://github.com/YYY-DXS/DIY-code/releases/tag/v2.0.3)
+最新发行版：[v2.0.4](https://github.com/YYY-DXS/DIY-code/releases/tag/v2.0.4)
 
 每个软件一个 zip，解压即用；`SHA256SUMS.txt` 可核对下载完整性。
 
@@ -18,7 +18,7 @@
 | [`projects/`](projects/README.md) | 各个 DIY 项目的资料（齐柏林飞艇、外骨骼、台历、航模方向） |
 | [`tools/`](tools/README.md) | 配套工具：DeepSeek 记录同步、Git 同步、隐私检查、Markdown 转换 |
 
-## 本次 v2.0.3 收录
+## 本次 v2.0.4 收录
 
 | 包 | 类型 | 用途 |
 | --- | --- | --- |
@@ -36,6 +36,7 @@
 | `dsh-plugin-pulse.zip` | 桌面工具 | 可视化 DSH 插件安装 / 卸载 / 兼容性诊断 |
 | `political-mindmap.zip` | 生成器 | 高中政治必修 1–2 思维导图（A4 一框一页） |
 | `tools.zip` | 工具集 | 同步、发布、隐私检查、Markdown 转换等配套脚本 |
+| `updater.zip` | 更新器 | 解压到各软件同一层，运行 `apps\更新所有软件.cmd`，按最新 Release 增量更新 |
 
 ## 文件格式
 

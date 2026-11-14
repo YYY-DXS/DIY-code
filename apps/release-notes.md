@@ -1,8 +1,15 @@
-# DIY 软件合集 v2.0.3
+# DIY 软件合集 v2.0.4
 
-本次发行把仓库里所有可独立分发的软件打成 14 个 zip：8 个 Windows 桌面工具、4 个 DSH
-宿主插件、1 个生成器、1 个工具集。每个包解压即用（个别需要 Node / Python / DSH 运行时，
-见各包 README）。
+本次发行把仓库里所有可独立分发的软件打成 15 个 zip：8 个 Windows 桌面工具、4 个 DSH
+宿主插件、1 个生成器、1 个工具集、1 个更新器。每个包解压即用（个别需要 Node / Python / DSH
+运行时，见各包 README）。
+
+## v2.0.4 修复
+
+- **新增 `updater.zip`**：包含 `apps/manifest.json`、`apps/check-update.ps1`、`apps/更新所有软件.cmd`。
+  解压到各软件同一层后运行，下载用户终于拿得到更新器。
+- **更新器不再跟随 main**：`check-update.ps1` 默认解析 GitHub 最新 Release tag，只拉已发布版本；
+  需要指定版本时用 `-Ref vX.Y.Z`。同时兼容仓库布局与各 zip 解压到同一层的布局。
 
 ## v2.0.3 更新
 
@@ -56,6 +63,7 @@
 | `codex-history-bridge.zip` | DSH 插件 | 把本机 Codex 历史导入工作区 |
 | `political-mindmap.zip` | 生成器 | 高中政治必修 1–2 思维导图（A4 一框一页） |
 | `tools.zip` | 工具集 | 同步、发布、隐私检查、Markdown 转换等配套脚本 |
+| `updater.zip` | 更新器 | 解压到各软件同一层，运行 `apps\更新所有软件.cmd`，按最新 Release 增量更新 |
 | `SHA256SUMS.txt` | 校验值 | 下载后可用 `certutil -hashfile 文件名 SHA256` 核对 |
 
 ## 自动更新
@@ -66,4 +74,4 @@
 ## 说明
 
 这批代码最初是从 Codex 会话记录里的补丁重放重建的，个别功能可能与最初版本有细微差别。
-v2.0.3 已修复已知的启动阻断问题并增强清理/隐私功能；发现问题请开 Issue。
+v2.0.4 已修复更新器分发与版本基准问题；v2.0.3 增强了清理/隐私功能与快捷方式图标。

@@ -1,21 +1,75 @@
-﻿#
-  按 manifest.json 校验并更新 apps 下的文件。
-  用法：双击 更新所有软件.cmd，或 powershell -File check-update.ps1
+﻿<#
+  按 apps/manifest.json 校验并更新已安装的自制软件。
+
+  更新基准默认是 GitHub 上**最新的 Release tag**，不是 main —— 避免把未发布的
+  开发中代码拉给下载用户。需要别的版本时用 -Ref 指定。
+
+  用法：
+    powershell -ExecutionPolicy Bypass -File check-update.ps1
+    powershell -ExecutionPolicy Bypass -File check-update.ps1 -Check
+    powershell -ExecutionPolicy Bypass -File check-update.ps1 -Ref v2.0.2
+    powershell -ExecutionPolicy Bypass -File check-update.ps1 -Root D:\Tools
+
+  目录约定（两种都支持）：
+    仓库布局      <Root>\apps\pc-toolkit\...
+    解压布局      <Root>\pc-toolkit\...        （各 zip 解压到同一层）
+    插件同理      <Root>\plugins\deepseek-hub\... 或 <Root>\deepseek-hub\...
 #>
+[CmdletBinding()]
+param(
+    [string]$Root = '',
+    [string]$Ref = '',
+    [string]$Repo = 'YYY-DXS/DIY-code',
+    [switch]$Check,
+    [switch]$NoPause
+)
 
 $ErrorActionPreference = 'Continue'
 try { [Console]::OutputEncoding = [Text.Encoding]::UTF8 } catch {}
+try {
+    [Net.ServicePointManager]::SecurityProtocol =
+        [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+} catch {}
 
-$repoRoot = Split-Path -Parent $PSScriptRoot
-$repo = 'YYY-DXS/DIY-code'
-$branch = 'main'
-$rawBase = "https://raw.githubusercontent.com/$repo/$branch"
-$apiBase = "https://api.github.com/repos/$repo/contents"
-$manifestRel = 'apps/manifest.json'
+$scriptDir = $PSScriptRoot
+if (-not $scriptDir) { $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path }
+if (-not $Root) { $Root = Split-Path -Parent $scriptDir }
+$Root = (Resolve-Path -LiteralPath $Root -ErrorAction SilentlyContinue).Path
+if (-not $Root -or -not (Test-Path -LiteralPath $Root -PathType Container)) {
+    Write-Host "找不到软件目录。用 -Root 指定各软件所在的那一层。" -ForegroundColor Red
+    if (-not $NoPause) { Read-Host "按回车关闭" }
+    exit 1
+}
+
+function Resolve-Ref {
+    param([string]$Wanted)
+    if ($Wanted) { return $Wanted }
+    try {
+        $release = Invoke-RestMethod -Uri "https://api.github.com/repos/$Repo/releases/latest" `
+            -Headers @{ 'User-Agent' = 'diy-apps-updater' } -TimeoutSec 25
+        if ($release -and $release.tag_name) { return [string]$release.tag_name }
+    } catch { }
+    $versionFile = Join-Path $Root 'VERSION'
+    if (Test-Path -LiteralPath $versionFile) {
+        $version = (Get-Content -LiteralPath $versionFile -Raw -ErrorAction SilentlyContinue)
+        if ($version -and $version.Trim()) { return ('v' + $version.Trim()) }
+    }
+    return ''
+}
+
+$resolvedRef = Resolve-Ref -Wanted $Ref
+if (-not $resolvedRef) {
+    Write-Host "拿不到最新 Release，也没有 VERSION 文件。" -ForegroundColor Red
+    Write-Host "请用 -Ref vX.Y.Z 明确指定一个已发布的版本。" -ForegroundColor Yellow
+    if (-not $NoPause) { Read-Host "按回车关闭" }
+    exit 1
+}
+$rawBase = "https://raw.githubusercontent.com/$Repo/$resolvedRef"
+$apiBase = "https://api.github.com/repos/$Repo/contents"
 
 function Get-RemoteBytes([string]$rel) {
     try {
-        $resp = Invoke-WebRequest -Uri "$rawBase/$rel" -UseBasicParsing -TimeoutSec 20
+        $resp = Invoke-WebRequest -Uri "$rawBase/$rel" -UseBasicParsing -TimeoutSec 30
         if ($resp.StatusCode -eq 200) {
             # 用原始字节流，避免把 ico/png/exe 当文本写入后损坏
             if ($null -ne $resp.RawContentStream) { return $resp.RawContentStream.ToArray() }
@@ -24,23 +78,21 @@ function Get-RemoteBytes([string]$rel) {
         }
     } catch { }
     try {
-        $api = Invoke-RestMethod -Uri "$apiBase/$rel" -Headers @{ 'User-Agent' = 'diy-apps-updater' } -TimeoutSec 25
-        if ($api.content) {
-            return [Convert]::FromBase64String(($api.content -replace '\s', ''))
-        }
+        $api = Invoke-RestMethod -Uri "$apiBase/$rel`?ref=$resolvedRef" `
+            -Headers @{ 'User-Agent' = 'diy-apps-updater' } -TimeoutSec 30
+        if ($api.content) { return [Convert]::FromBase64String(($api.content -replace '\s', '')) }
     } catch { }
     return $null
 }
 
-function Test-TextFile([string]$path) {
-    $ext = [IO.Path]::GetExtension($path).ToLowerInvariant()
+function Test-TextRel([string]$rel) {
+    $ext = [IO.Path]::GetExtension($rel).ToLowerInvariant()
     return -not ($ext -in @('.ico', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.exe', '.dll', '.zip', '.pdf', '.woff', '.woff2', '.mp4'))
 }
 
-function Get-NormalizedSha256([string]$path) {
-    $bytes = [IO.File]::ReadAllBytes($path)
-    if (Test-TextFile $path) {
-        # 本地可能是 CRLF，GitHub 上是 LF；比较前统一成 LF
+function Get-NormalizedHashBytes([byte[]]$bytes, [string]$rel) {
+    if (Test-TextRel $rel) {
+        # 本地可能是 CRLF，仓库里是 LF；比较前统一成 LF
         $text = [Text.Encoding]::UTF8.GetString($bytes)
         $bytes = [Text.Encoding]::UTF8.GetBytes(($text -replace "`r`n", "`n"))
     }
@@ -48,57 +100,113 @@ function Get-NormalizedSha256([string]$path) {
     return ([BitConverter]::ToString($sha.ComputeHash($bytes)) -replace '-', '').ToLowerInvariant()
 }
 
-Write-Host "检查更新：$repo" -ForegroundColor Cyan
-$manifestBytes = Get-RemoteBytes $manifestRel
-if (-not $manifestBytes) {
-    Write-Host "拿不到清单，检查网络后重试。" -ForegroundColor Red
-    Read-Host "按回车关闭"
-    exit 1
+function Get-NormalizedHashFile([string]$path, [string]$rel) {
+    return Get-NormalizedHashBytes ([IO.File]::ReadAllBytes($path)) $rel
 }
 
-$manifestText = if ($manifestBytes -is [byte[]]) { [Text.Encoding]::UTF8.GetString($manifestBytes) } else { [string]$manifestBytes }
-$manifest = $manifestText | ConvertFrom-Json
+# 把清单里的仓库路径映射到本机位置；没装这个软件就返回空。
+function Resolve-Target([string]$rel) {
+    $parts = $rel -split '/'
+    if ($parts.Count -lt 2) { return '' }
+    $top = $parts[0]
+    if ($parts.Count -eq 2) {
+        $topDir = Join-Path $Root $top
+        if (Test-Path -LiteralPath $topDir -PathType Container) { return (Join-Path $topDir $parts[1]) }
+        return ''
+    }
+    $name = $parts[1]
+    $rest = ($parts[2..($parts.Count - 1)] -join [IO.Path]::DirectorySeparatorChar)
+    $candidates = @(
+        (Join-Path (Join-Path $Root $top) $name),
+        (Join-Path $Root $name)
+    )
+    foreach ($candidate in $candidates) {
+        if (Test-Path -LiteralPath $candidate -PathType Container) {
+            return (Join-Path $candidate $rest)
+        }
+    }
+    return ''
+}
+
+Write-Host "更新基准：$Repo @ $resolvedRef" -ForegroundColor Cyan
+Write-Host "软件目录：$Root"
+if ($Check) { Write-Host "只检查，不写入。" -ForegroundColor Yellow }
+
+$manifestBytes = Get-RemoteBytes 'apps/manifest.json'
+if (-not $manifestBytes) {
+    Write-Host "拿不到清单，检查网络后重试。" -ForegroundColor Red
+    if (-not $NoPause) { Read-Host "按回车关闭" }
+    exit 1
+}
+$manifest = [Text.Encoding]::UTF8.GetString($manifestBytes) | ConvertFrom-Json
 
 $updated = 0
+$same = 0
+$missing = 0
 $failed = 0
+$mismatch = 0
+
 foreach ($prop in $manifest.files.PSObject.Properties) {
-    $rel = $prop.Name
-    $want = [string]$prop.Value
-    $local = Join-Path $repoRoot $rel
+    $rel = [string]$prop.Name
+    $want = ([string]$prop.Value).ToLowerInvariant()
+
+    $target = Resolve-Target $rel
+    if (-not $target) { $missing++; continue }
+
     $need = $true
-    if (Test-Path -LiteralPath $local) {
-        $have = Get-NormalizedSha256 $local
-        if ($have -eq $want) { $need = $false }
+    if (Test-Path -LiteralPath $target) {
+        $have = Get-NormalizedHashFile $target $rel
+        if ($have -eq $want) { $same++; $need = $false }
     }
     if (-not $need) { continue }
 
+    if ($Check) {
+        Write-Host "  会更新：$rel" -ForegroundColor Yellow
+        $updated++
+        continue
+    }
+
     $bytes = Get-RemoteBytes $rel
     if (-not $bytes) {
-        Write-Host "  失败：$rel" -ForegroundColor Yellow
+        Write-Host "  失败：$rel（下载不到）" -ForegroundColor Yellow
         $failed++
         continue
     }
-    $dir = Split-Path -Parent $local
-    if (-not (Test-Path -LiteralPath $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
-    if ($bytes -isnot [byte[]]) { $bytes = [Text.Encoding]::UTF8.GetBytes([string]$bytes) }
-    $ext = [IO.Path]::GetExtension($local).ToLowerInvariant()
-    if ((Test-TextFile $local) -and ($ext -in @('.cmd', '.bat', '.ps1'))) {
+    $got = Get-NormalizedHashBytes $bytes $rel
+    if ($got -ne $want) {
+        Write-Host "  失败：$rel（哈希不符，可能是下载被截断）" -ForegroundColor Yellow
+        $mismatch++
+        continue
+    }
+
+    $dir = Split-Path -Parent $target
+    if ($dir -and -not (Test-Path -LiteralPath $dir)) {
+        New-Item -ItemType Directory -Path $dir -Force | Out-Null
+    }
+    $ext = [IO.Path]::GetExtension($target).ToLowerInvariant()
+    if ((Test-TextRel $rel) -and ($ext -in @('.cmd', '.bat', '.ps1'))) {
         # Windows 批处理 / PowerShell 落盘时保持 CRLF
         $text = [Text.Encoding]::UTF8.GetString($bytes)
         $text = $text -replace "`r`n", "`n"
         $text = $text -replace "`n", "`r`n"
         $bytes = [Text.Encoding]::UTF8.GetBytes($text)
     }
-    [IO.File]::WriteAllBytes($local, $bytes)
+    [IO.File]::WriteAllBytes($target, $bytes)
     Write-Host "  更新：$rel" -ForegroundColor Green
     $updated++
 }
 
 Write-Host ""
-if ($updated -eq 0 -and $failed -eq 0) {
-    Write-Host "已经是最新版。" -ForegroundColor Green
+if ($updated -eq 0 -and $failed -eq 0 -and $mismatch -eq 0) {
+    Write-Host "已经是最新版（$resolvedRef）。" -ForegroundColor Green
 } else {
-    Write-Host "完成：更新 $updated 个文件，失败 $failed 个。" -ForegroundColor Green
+    Write-Host "完成：更新 $updated 个，已是最新 $same 个，失败 $failed 个，校验不符 $mismatch 个。" -ForegroundColor Green
+}
+if ($missing -gt 0) {
+    Write-Host "未安装而跳过的文件：$missing 个（解压对应软件包后就地再跑一次即可）。" -ForegroundColor DarkGray
 }
 Write-Host ""
-Read-Host "按回车关闭"
+if (-not $NoPause) { Read-Host "按回车关闭" }
+
+if ($failed -gt 0 -or $mismatch -gt 0) { exit 1 }
+exit 0
