@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Codex 历史记录桥",
+    "description": "把本机 Codex 的全部会话历史导入工作区，生成 Markdown 逐字记录、索引，并可保留原始 JSONL。"
+  }
+}

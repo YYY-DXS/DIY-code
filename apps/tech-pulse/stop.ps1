@@ -1,4 +1,4 @@
-$listening = netstat -ano | Select-String ':4173\s+.*LISTENING'
+﻿$listening = netstat -ano | Select-String ':4173\s+.*LISTENING'
 if (-not $listening) {
   Write-Output "科技脉冲未在运行。"
   exit 0

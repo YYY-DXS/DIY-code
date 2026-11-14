@@ -1,0 +1,12 @@
+{
+  "name": "political-mindmap",
+  "version": "2.0.0",
+  "private": true,
+  "description": "高中政治必修1-2 思维导图生成器（A4 一框一页）",
+  "type": "commonjs",
+  "scripts": {
+    "build": "node build.js",
+    "fit": "node build.js --fit",
+    "preview": "node preview.js"
+  }
+}

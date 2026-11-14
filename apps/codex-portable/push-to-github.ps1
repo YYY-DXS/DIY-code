@@ -1,4 +1,4 @@
-<#
+﻿<#
   把 codex-portable 推到你的 GitHub 仓库。
 
   用法：

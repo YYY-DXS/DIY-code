@@ -1,4 +1,4 @@
-$ErrorActionPreference = "Stop"
+﻿$ErrorActionPreference = "Stop"
 $appRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $nodePath = (Get-Command node -ErrorAction Stop).Source
 $taskName = "TechPulse-DailyBriefing"

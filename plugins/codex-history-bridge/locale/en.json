@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Codex history bridge",
+    "description": "Imports every Codex conversation from the local Codex home into the workspace as Markdown transcripts, an index, and an optional raw copy."
+  }
+}

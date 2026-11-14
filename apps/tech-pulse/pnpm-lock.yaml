@@ -1,0 +1,72 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+
+  .:
+    devDependencies:
+      esbuild-wasm:
+        specifier: ^0.28.2
+        version: 0.28.2
+      pe-library:
+        specifier: ^2.0.1
+        version: 2.0.1
+      postject:
+        specifier: ^1.0.0-alpha.6
+        version: 1.0.0-alpha.6
+      resedit:
+        specifier: ^3.1.0
+        version: 3.1.0
+      webview-node:
+        specifier: ^0.1.5
+        version: 0.1.5
+
+packages:
+
+  commander@9.5.0:
+    resolution: {integrity: sha512-KRs7WVDKg86PWiuAqhDrAQnTXZKraVcCc6vFdL14qrZ/DcWwuRo7VoiYXalXO7S5GKpqYiVEwCbgFDfxNHKJBQ==}
+    engines: {node: ^12.20.0 || >=14}
+
+  esbuild-wasm@0.28.2:
+    resolution: {integrity: sha512-GccVwhv3mmOUVQHCQm2Ox/rby8n/EqUwvZxE6Pjfikrq/lWw9g9WX/u9EykWnpot3Ko6j426DgQdea2xWKIAQA==}
+    engines: {node: '>=18'}
+    hasBin: true
+
+  pe-library@2.0.1:
+    resolution: {integrity: sha512-/qjYFqNSlq59B5DI36am++5/3gMgh02QnzpYigrwrW6s+QpU0mHf09/iA4wjTu21UUxodyV7ZCetV5MiDhaN/A==}
+    engines: {node: '>=20'}
+
+  postject@1.0.0-alpha.6:
+    resolution: {integrity: sha512-b9Eb8h2eVqNE8edvKdwqkrY6O7kAwmI8kcnBv1NScolYJbo59XUF0noFq+lxbC1yN20bmC0WBEbDC5H/7ASb0A==}
+    engines: {node: '>=14.0.0'}
+    hasBin: true
+
+  resedit@3.1.0:
+    resolution: {integrity: sha512-i6CN8E6FzTpzsGq/oUnm2GTWhddpZEbnAE+zeNwqTppucTK7xd178q1xWEMrFb+nLnCh+geDqZ4QwhFN8VEgVQ==}
+    engines: {node: '>=20'}
+
+  webview-node@0.1.5:
+    resolution: {integrity: sha512-7W/M1Xhf0OxkA0C+kXLN4MxXzGPpZtmP3PZh5CRcCK0PgVWTxQYVv0mGd6ajTEl8k6WiOzwNraf2N5KpQjs2Xg==}
+    engines: {node: '>=16.0.0'}
+    os: [win32]
+
+snapshots:
+
+  commander@9.5.0: {}
+
+  esbuild-wasm@0.28.2: {}
+
+  pe-library@2.0.1: {}
+
+  postject@1.0.0-alpha.6:
+    dependencies:
+      commander: 9.5.0
+
+  resedit@3.1.0:
+    dependencies:
+      pe-library: 2.0.1
+
+  webview-node@0.1.5: {}

@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DSH 插件安装面板</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2330; --border:#2a3140;
+    --text:#e6edf3; --dim:#8b949e; --accent:#4b6fff; --accent2:#6f8cff;
+    --ok:#3fb950; --warn:#d29922; --bad:#f85149; --chip:#21283a;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(1200px 600px at 20% -10%,#16213a 0%,var(--bg) 55%);
+       color:var(--text);font:14px/1.6 "Segoe UI","Microsoft YaHei",system-ui,sans-serif;min-height:100vh}
+  header{padding:24px 32px 6px}
+  h1{margin:0;font-size:22px;letter-spacing:.5px}
+  h1 span{color:var(--accent2)}
+  .sub{color:var(--dim);margin-top:6px;font-size:13px}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .chip{background:var(--chip);border:1px solid var(--border);border-radius:999px;padding:3px 11px;
+        font-size:12px;color:var(--dim)}
+  .chip b{color:var(--text);font-weight:600}
+  .chip.ok b{color:var(--ok)} .chip.bad b{color:var(--bad)} .chip.warn b{color:var(--warn)}
+  .tabs{display:flex;gap:6px;padding:10px 32px 0}
+  .tab{background:transparent;border:1px solid transparent;color:var(--dim);border-radius:10px;
+       padding:8px 18px;font-size:14px;font-weight:600;cursor:pointer}
+  .tab.active{background:var(--panel);border-color:var(--border);color:var(--text)}
+  .tab .cnt{font-weight:400;color:var(--dim);font-size:12px;margin-left:4px}
+  .banner{margin:10px 32px 14px;padding:9px 14px;border-radius:10px;font-size:13px;
+          background:rgba(75,111,255,.12);border:1px solid rgba(75,111,255,.35);color:#c8d4ff}
+  .toolbar{display:flex;gap:10px;align-items:center;margin:0 0 14px;flex-wrap:wrap}
+  .toolbar input[type=text],.toolbar input:not([type]){flex:1;min-width:180px;max-width:320px;background:var(--panel);
+          border:1px solid var(--border);color:var(--text);border-radius:9px;padding:9px 12px;font-size:13px;outline:none}
+  .toolbar input:focus{border-color:var(--accent)}
+  select{background:var(--panel);border:1px solid var(--border);color:var(--text);border-radius:9px;
+         padding:9px 10px;font-size:13px;outline:none}
+  .chk{display:flex;align-items:center;gap:6px;color:var(--dim);font-size:13px;cursor:pointer}
+  button{cursor:pointer;font-family:inherit}
+  .btn{background:var(--accent);color:#fff;border:none;border-radius:9px;padding:9px 16px;font-size:13px;
+       font-weight:600;transition:.15s}
+  .btn:hover{background:var(--accent2)}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .btn.ghost{background:transparent;border:1px solid var(--border);color:var(--dim);font-weight:500}
+  .btn.ghost:hover{color:var(--text);border-color:#3d4657}
+  .btn.danger{background:transparent;border:1px solid rgba(248,81,73,.5);color:#ff9d97;font-weight:500}
+  .btn.danger:hover{background:rgba(248,81,73,.12)}
+  main{padding:0 32px 40px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:14px}
+  .card{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--border);
+        border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:9px;
+        box-shadow:0 8px 24px rgba(0,0,0,.22);position:relative;overflow:hidden}
+  .card::before{content:"";position:absolute;inset:0 0 auto 0;height:2px;
+        background:linear-gradient(90deg,var(--accent),transparent 70%);opacity:.6}
+  .card.lib{padding:14px}
+  .c-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+  .c-name{font-size:15px;font-weight:700;line-height:1.35}
+  .c-cat{font-size:11.5px;color:var(--dim);margin-top:2px;word-break:break-all}
+  .pills{display:flex;gap:5px;flex-direction:column;align-items:flex-end;flex:none}
+  .pill{font-size:10.5px;padding:1px 8px;border-radius:999px;white-space:nowrap;border:1px solid transparent}
+  .pill.installed{background:rgba(63,185,80,.14);color:var(--ok);border-color:rgba(63,185,80,.4)}
+  .pill.missing{background:rgba(139,148,158,.1);color:var(--dim);border-color:var(--border)}
+  .pill.v-ok{background:rgba(63,185,80,.14);color:var(--ok);border-color:rgba(63,185,80,.4)}
+  .pill.v-warn{background:rgba(210,153,34,.16);color:#e3b341;border-color:rgba(210,153,34,.4)}
+  .pill.v-bad{background:rgba(248,81,73,.16);color:#ff7b72;border-color:rgba(248,81,73,.45)}
+  .pill.v-unknown{background:rgba(139,148,158,.1);color:var(--dim);border-color:var(--border)}
+  .pill.t-gold{background:rgba(210,153,34,.14);color:#e3b341;border-color:rgba(210,153,34,.35)}
+  .pill.t-silver{background:rgba(180,190,205,.12);color:#c3ccd9;border-color:rgba(180,190,205,.28)}
+  .pill.t-bronze{background:rgba(196,113,68,.14);color:#d99b78;border-color:rgba(196,113,68,.35)}
+  .c-sum{font-size:12.5px;color:#c9d1d9;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+  .c-meta{font-size:11.5px;color:var(--dim);display:flex;gap:10px;flex-wrap:wrap}
+  .risk{display:flex;gap:8px;align-items:flex-start;font-size:12px;line-height:1.5;
+        padding:8px 10px;border-radius:9px;background:rgba(255,255,255,.02);border:1px dashed var(--border)}
+  .risk .lv{font-weight:700;white-space:nowrap;padding:1px 7px;border-radius:6px;font-size:11px}
+  .lv.high{background:rgba(248,81,73,.16);color:#ff7b72}
+  .lv.medium{background:rgba(210,153,34,.16);color:#e3b341}
+  .lv.low{background:rgba(63,185,80,.14);color:#56d364}
+  .c-actions{display:flex;gap:7px;margin-top:auto;padding-top:3px;flex-wrap:wrap;align-items:center}
+  .c-actions .btn{padding:6px 11px;font-size:12px}
+  a.src{font-size:12px;color:var(--accent2);text-decoration:none;margin-left:auto}
+  a.src:hover{text-decoration:underline}
+  .hidden{display:none !important}
+
+  /* diagnostics */
+  .diag{margin:0 0 18px;border:1px solid var(--border);border-radius:14px;overflow:hidden;
+        background:linear-gradient(180deg,#151b25,#11161f)}
+  .diag-head{display:flex;align-items:center;gap:12px;padding:12px 16px;background:#11161f;
+             border-bottom:1px solid var(--border);font-size:13px;font-weight:600}
+  .diag-head .when{color:var(--dim);font-weight:400;font-size:12px}
+  .diag-head .spacer{margin-left:auto}
+  .host-checks{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:1px;background:var(--border)}
+  .hck{background:#131a24;padding:9px 14px;font-size:12.5px;display:flex;gap:8px;align-items:flex-start}
+  .hck .k{color:var(--dim);min-width:88px}
+  .hck .v{color:var(--text);word-break:break-all}
+  .dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-top:6px;flex:none}
+  .dot.ok{background:var(--ok)} .dot.fail{background:var(--bad)}
+  .dot.unknown{background:var(--dim)} .dot.info{background:var(--accent)}
+  .diag-items{padding:6px 16px 12px}
+  .ditem{border-top:1px solid #1f2733;padding:8px 0;font-size:12.5px}
+  .ditem:first-child{border-top:none}
+  .dhead{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .dname{font-weight:600;font-size:13px}
+  .dverdict{font-size:11px;padding:1px 8px;border-radius:999px;border:1px solid}
+  .dverdict.v-ok{color:var(--ok);border-color:rgba(63,185,80,.45);background:rgba(63,185,80,.1)}
+  .dverdict.v-warn{color:#e3b341;border-color:rgba(210,153,34,.45);background:rgba(210,153,34,.1)}
+  .dverdict.v-bad{color:#ff7b72;border-color:rgba(248,81,73,.45);background:rgba(248,81,73,.1)}
+  .dverdict.v-unknown{color:var(--dim);border-color:var(--border);background:rgba(139,148,158,.08)}
+  .dlatest{color:var(--dim);font-size:12px}
+  .dchecks{margin:5px 0 0 4px;display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:2px 18px}
+  .dchk{display:flex;gap:7px;align-items:flex-start;color:#aeb8c5;font-size:12px}
+  .dchk .lbl{color:#8b949e;min-width:100px;flex:none}
+  .dchk .dt{word-break:break-all}
+
+  /* library */
+  .lib-stat{color:var(--dim);font-size:12px}
+  .lib-stat b{color:var(--text)}
+  .lib-diag{font-size:12px;border-top:1px dashed var(--border);padding-top:7px;display:none}
+  .lib-diag.show{display:block}
+  .pager{display:flex;gap:8px;align-items:center;justify-content:center;margin-top:18px;flex-wrap:wrap}
+  .pager button{background:var(--panel);border:1px solid var(--border);color:var(--text);border-radius:8px;
+                padding:6px 12px;font-size:12.5px}
+  .pager button:disabled{opacity:.4;cursor:not-allowed}
+  .pager .pg{color:var(--dim);font-size:12.5px}
+
+  .console{margin-top:20px;background:#0a0e14;border:1px solid var(--border);border-radius:12px;
+           display:none;overflow:hidden}
+  .console.show{display:block}
+  .c-head2{display:flex;align-items:center;gap:12px;padding:10px 14px;background:#11161f;
+           border-bottom:1px solid var(--border);font-size:12.5px}
+  .c-head2 .status{color:var(--dim)}
+  .c-head2 .status.running{color:var(--warn)}
+  .c-head2 .status.done{color:var(--ok)}
+  .c-head2 .status.failed{color:var(--bad)}
+  .c-head2 button{margin-left:auto;background:transparent;border:1px solid var(--border);color:var(--dim);
+           border-radius:7px;padding:3px 10px;font-size:12px}
+  #log{margin:0;padding:12px 14px;max-height:280px;overflow:auto;font:12px/1.55 ui-monospace,Consolas,monospace;
+       color:#b9c4d0;white-space:pre-wrap;word-break:break-all}
+  footer{padding:0 32px 30px;color:#5b6472;font-size:12px}
+  footer code{color:#8b949e}
+  .empty{color:var(--dim);padding:30px 0;text-align:center;grid-column:1/-1}
+</style>
+</head>
+<body>
+<header>
+  <h1>DSH <span>插件安装面板</span></h1>
+  <div class="sub">插件库持续从 dshbase 目录刷新 · 一键安装 / 卸载 · 安装前兼容性诊断</div>
+  <div class="chips" id="chips"></div>
+</header>
+
+<div class="tabs">
+  <button class="tab active" data-tab="picks">精选推荐 <span class="cnt" id="picks-count"></span></button>
+  <button class="tab" data-tab="lib">插件库 <span class="cnt" id="lib-count"></span></button>
+</div>
+
+<div class="banner">⚠ 安装/卸载是真实操作，装完需<b>重启 DeepSeek Harness</b> 才生效。诊断按 npm 最新元数据比对，仅供参考。</div>
+
+<main>
+  <section id="tab-picks">
+    <section class="diag" id="diag-panel">
+      <div class="diag-head">
+        <span>兼容性诊断</span>
+        <span class="when" id="diag-when"></span>
+        <span class="spacer"></span>
+        <button class="btn ghost" id="rerun-diag" style="padding:4px 12px;font-size:12px">重新诊断</button>
+      </div>
+      <div class="host-checks" id="host-checks"></div>
+      <div class="diag-items" id="diag-items"></div>
+    </section>
+    <div class="toolbar">
+      <input id="spec" placeholder="自定义 npm 包名或 github:owner/repo" spellcheck="false">
+      <button class="btn" id="custom-install">安装自定义</button>
+      <button class="btn ghost" id="refresh">刷新状态</button>
+      <button class="btn ghost" id="shutdown">退出面板</button>
+    </div>
+    <div class="grid" id="grid"></div>
+  </section>
+
+  <section id="tab-lib" class="hidden">
+    <div class="toolbar">
+      <input id="lib-q" placeholder="搜索插件名 / 描述 / 作者…" spellcheck="false">
+      <select id="lib-sort">
+        <option value="stars">按 Star 排序</option>
+        <option value="updated">按最近更新</option>
+        <option value="name">按名称</option>
+      </select>
+      <label class="chk"><input type="checkbox" id="lib-verified"> 仅 Verified</label>
+      <button class="btn ghost" id="lib-rescan">立即刷新</button>
+      <span class="lib-stat" id="lib-stat"></span>
+    </div>
+    <div class="grid" id="lib-grid"></div>
+    <div class="pager" id="lib-pager"></div>
+  </section>
+
+  <section class="console" id="console">
+    <div class="c-head2">
+      <span id="job-title">安装日志</span>
+      <span class="status" id="job-status">排队中</span>
+      <button id="close-console">收起</button>
+    </div>
+    <pre id="log"></pre>
+  </section>
+</main>
+
+<footer>由 <code>dsh-plugins/installer</code> 提供 · 只监听 127.0.0.1 · 插件库数据来自 dshbase 目录</footer>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const state = {
+  view: 'picks',
+  data: null,
+  diag: null,
+  diagBusy: false,
+  busy: false,
+  timer: null,
+  lib: { page: 1, size: 24, total: 0, q: '', sort: 'stars', verified: false },
+  libMeta: null,
+  libTimer: null,
+  diagCache: new Map(),
+};
+
+function el(tag, cls, text) {
+  const n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (text !== undefined) n.textContent = text;
+  return n;
+}
+async function api(path, opts) {
+  const r = await fetch(path, opts);
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
+  return j;
+}
+function chip(label, value, cls) {
+  const c = el('span', 'chip' + (cls ? ' ' + cls : ''), label + ' ');
+  c.appendChild(el('b', '', value));
+  return c;
+}
+const VERDICT = {
+  compatible: { cls: 'v-ok', text: '兼容' },
+  unknown: { cls: 'v-unknown', text: '待核实' },
+  incompatible: { cls: 'v-bad', text: '不兼容' },
+};
+const dot = (s) => el('span', 'dot ' + (s === 'fail' ? 'fail' : s === 'ok' ? 'ok' : s === 'unknown' ? 'unknown' : 'info'));
+function checksBlock(checks) {
+  const box = el('div', 'dchecks');
+  for (const c of checks) {
+    const line = el('div', 'dchk');
+    line.appendChild(dot(c.status));
+    line.appendChild(el('span', 'lbl', c.label));
+    line.appendChild(el('span', 'dt', c.detail));
+    box.appendChild(line);
+  }
+  return box;
+}
+
+/* ---------------------------- chips / header ---------------------------- */
+function renderChips() {
+  const host = (state.diag && state.diag.host) || {};
+  const meta = state.libMeta || { meta: {}, total: 0 };
+  const box = $('chips'); box.innerHTML = '';
+  if (host.dshVersion) box.appendChild(chip('DSH', host.dshVersion));
+  if (host.nodeVersion) box.appendChild(chip('Node', host.nodeVersion));
+  if (host.npmReachable !== undefined) box.appendChild(chip('npm', host.npmReachable ? '正常' : '不可达', host.npmReachable ? 'ok' : 'bad'));
+  box.appendChild(chip('插件库收录', (meta.total || 0).toLocaleString() + ' 个'));
+  if (meta.meta && meta.meta.pagesScanned) {
+    box.appendChild(chip('已扫描', (meta.meta.pagesScanned) + ' 页 · ' + (meta.meta.totalPages || 201) + ' 页一轮'));
+  }
+  if (meta.meta && meta.meta.lastRefresh) box.appendChild(chip('库更新', meta.meta.lastRefresh.slice(11)));
+  $('picks-count').textContent = state.data ? '· ' + state.data.catalog.items.length : '';
+  $('lib-count').textContent = meta.total ? '· ' + meta.total.toLocaleString() : '';
+}
+
+/* ------------------------------- 精选推荐 -------------------------------- */
+function verdictFor(id) {
+  if (!state.diag) return null;
+  return (state.diag.items || []).find(x => x.id === id) || null;
+}
+function riskLabel(level) {
+  return { high: '高风险', medium: '中风险', low: '低风险' }[level] || '未知';
+}
+function renderPicks() {
+  const d = state.data;
+  const grid = $('grid'); grid.innerHTML = '';
+  if (!d || !d.catalog.items.length) { grid.appendChild(el('div', 'empty', '暂无精选条目')); return; }
+  for (const it of d.catalog.items) {
+    const st = d.installed[it.id] || {};
+    const v = verdictFor(it.id);
+    const card = el('div', 'card');
+    const head = el('div', 'c-head');
+    const nameBox = el('div');
+    nameBox.appendChild(el('div', 'c-name', it.name));
+    nameBox.appendChild(el('div', 'c-cat', it.category + ' · ' + (it.profile || 'desktop') + ' profile'));
+    head.appendChild(nameBox);
+    const pills = el('div', 'pills');
+    pills.appendChild(el('span', 'pill ' + (st.installed ? 'installed' : 'missing'), st.installed ? '已安装' : '未安装'));
+    if (v) { const m = VERDICT[v.verdict] || VERDICT.unknown; pills.appendChild(el('span', 'pill ' + m.cls, '兼容性：' + m.text)); }
+    head.appendChild(pills);
+    card.appendChild(head);
+    card.appendChild(el('div', 'c-sum', it.summary));
+    card.appendChild(el('div', 'c-meta', it.verified));
+    const risk = el('div', 'risk');
+    risk.appendChild(el('span', 'lv ' + (it.risk || 'low'), riskLabel(it.risk)));
+    risk.appendChild(el('span', '', it.riskNote || ''));
+    card.appendChild(risk);
+    const actions = el('div', 'c-actions');
+    const cmd = it.command || ('dsh plugin --profile ' + (it.profile || 'desktop') + ' add ' + it.spec);
+    if (!st.installed) {
+      const b = el('button', 'btn', '一键安装'); b.onclick = () => startJob({ id: it.id }, 'install', it.name); actions.appendChild(b);
+    } else {
+      const b = el('button', 'btn ghost', '重新安装'); b.onclick = () => startJob({ id: it.id }, 'install', it.name); actions.appendChild(b);
+      const u = el('button', 'btn danger', '卸载'); u.onclick = () => startJob({ id: it.id }, 'uninstall', it.name); actions.appendChild(u);
+    }
+    const copy = el('button', 'btn ghost', '复制命令');
+    copy.onclick = async () => { try { await navigator.clipboard.writeText(cmd); copy.textContent = '已复制'; } catch { copy.textContent = cmd; } setTimeout(() => copy.textContent = '复制命令', 1500); };
+    actions.appendChild(copy);
+    if (it.source) { const a = el('a', 'src', '来源 ↗'); a.href = it.source; a.target = '_blank'; a.rel = 'noreferrer'; actions.appendChild(a); }
+    card.appendChild(actions);
+    grid.appendChild(card);
+  }
+}
+function renderDiag() {
+  const d = state.diag; if (!d) return;
+  $('diag-when').textContent = '· ' + d.generatedAt + ' · 兼容 ' + d.summary.compatible + '/' + d.summary.total;
+  const hc = $('host-checks'); hc.innerHTML = '';
+  const rows = [
+    ['DSH 安装', d.host.appFound ? '已找到' : '未找到', d.host.appFound ? 'ok' : 'fail'],
+    ['DSH 版本', d.host.dshVersion || '未识别', d.host.dshVersion ? 'ok' : 'unknown'],
+    ['Node 版本', d.host.nodeVersion || '未识别', d.host.nodeVersion ? 'ok' : 'unknown'],
+    ['npm 连通', d.host.npmReachable ? '正常' : '不可达', d.host.npmReachable ? 'ok' : 'fail'],
+    ['Profile', (d.host.profiles || []).join(' / ') || '无', 'info'],
+  ];
+  for (const [k, v, s] of rows) {
+    const cell = el('div', 'hck'); cell.appendChild(dot(s)); cell.appendChild(el('span', 'k', k)); cell.appendChild(el('span', 'v', v)); hc.appendChild(cell);
+  }
+  const di = $('diag-items'); di.innerHTML = '';
+  for (const it of d.items) {
+    const row = el('div', 'ditem'); const head = el('div', 'dhead');
+    const m = VERDICT[it.verdict] || VERDICT.unknown;
+    head.appendChild(el('span', 'dname', it.name));
+    head.appendChild(el('span', 'dverdict ' + m.cls, m.text));
+    head.appendChild(el('span', 'dlatest', 'latest ' + (it.latest || '未知') + ' · ' + it.profile + ' profile'));
+    row.appendChild(head); row.appendChild(checksBlock(it.checks)); di.appendChild(row);
+  }
+}
+async function diagnose() {
+  if (state.diagBusy) return;
+  state.diagBusy = true; $('diag-when').textContent = '诊断中…';
+  try { state.diag = await api('/api/diagnose'); renderDiag(); renderPicks(); }
+  catch (e) { $('diag-when').textContent = '诊断失败：' + e.message; }
+  finally { state.diagBusy = false; }
+}
+
+/* -------------------------------- 插件库 --------------------------------- */
+function libCard(it) {
+  const card = el('div', 'card lib');
+  const head = el('div', 'c-head');
+  const box = el('div');
+  const nameLine = el('div', 'c-name');
+  nameLine.textContent = it.name;
+  box.appendChild(nameLine);
+  const cat = el('div', 'c-cat');
+  cat.textContent = [it.owner, it.npm ? 'npm' : 'GitHub', (it.ucs || '').split('|')[0]].filter(Boolean).join(' · ');
+  box.appendChild(cat);
+  head.appendChild(box);
+  const pills = el('div', 'pills');
+  if (it.statusText) pills.appendChild(el('span', 'pill ' + (it.status === 'ok' ? 'installed' : 'missing'), it.statusText));
+  if (it.trust) pills.appendChild(el('span', 'pill t-' + it.trust, it.trust));
+  head.appendChild(pills);
+  card.appendChild(head);
+
+  const desc = el('div', 'c-sum', it.desc || '（无描述）');
+  desc.title = it.desc || '';
+  card.appendChild(desc);
+
+  const meta = el('div', 'c-meta');
+  meta.appendChild(el('span', '', '★ ' + (it.stars || 0)));
+  if (it.license) meta.appendChild(el('span', '', it.license));
+  if (it.updated) meta.appendChild(el('span', '', '↻ ' + it.updated));
+  card.appendChild(meta);
+
+  const actions = el('div', 'c-actions');
+  const spec = it.spec || '';
+  if (spec) {
+    const b = el('button', 'btn', '一键安装');
+    b.onclick = () => startJob({ spec, profile: 'desktop' }, 'install', it.name);
+    actions.appendChild(b);
+  }
+  const diagBtn = el('button', 'btn ghost', '诊断');
+  const diagBox = el('div', 'lib-diag');
+  diagBtn.onclick = async () => {
+    diagBox.classList.toggle('show');
+    if (!diagBox.classList.contains('show')) return;
+    if (state.diagCache.has(spec)) { diagBox.innerHTML = ''; const cached = state.diagCache.get(spec); diagBox.appendChild(checksBlock(cached.checks)); return; }
+    diagBox.innerHTML = '';
+    diagBox.appendChild(el('div', 'dchk', '诊断中…'));
+    try {
+      const res = await api('/api/diagnose-one', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ spec }) });
+      state.diagCache.set(spec, res); diagBox.innerHTML = ''; diagBox.appendChild(checksBlock(res.checks));
+    } catch (e) { diagBox.innerHTML = ''; diagBox.appendChild(el('div', 'dchk', '诊断失败：' + e.message)); }
+  };
+  actions.appendChild(diagBtn);
+  if (spec) {
+    const copy = el('button', 'btn ghost', '复制命令');
+    copy.onclick = async () => { try { await navigator.clipboard.writeText('dsh plugin --profile desktop add ' + spec); copy.textContent = '已复制'; } catch {} setTimeout(() => copy.textContent = '复制命令', 1500); };
+    actions.appendChild(copy);
+  }
+  if (it.source) { const a = el('a', 'src', 'dshbase ↗'); a.href = it.source; a.target = '_blank'; a.rel = 'noreferrer'; actions.appendChild(a); }
+  card.appendChild(actions);
+  card.appendChild(diagBox);
+  return card;
+}
+let libSearchTimer = null;
+function renderLibStat() {
+  const st = state.libMeta;
+  if (!st) return;
+  const m = st.meta || {};
+  const txt = (m.scanning ? '扫描中 · ' : '') + '已收录 ' + (st.total || 0).toLocaleString() + ' 个 · 已扫描 ' + (m.pagesScanned || 0) + ' 页'
+    + (m.lastRefresh ? ' · 最后更新 ' + m.lastRefresh : '') + (m.lastError ? ' · 最近错误：' + m.lastError : '');
+  $('lib-stat').textContent = txt;
+  renderChips();
+}
+async function loadLib() {
+  const l = state.lib;
+  const params = new URLSearchParams({ page: l.page, size: l.size, sort: l.sort, q: l.q, verified: l.verified ? '1' : '0' });
+  try {
+    const res = await api('/api/plugins?' + params.toString());
+    l.total = res.total;
+    const grid = $('lib-grid'); grid.innerHTML = '';
+    if (!res.items.length) { grid.appendChild(el('div', 'empty', '没有匹配的插件（或插件库还在扫描中，稍等几秒）')); }
+    for (const it of res.items) grid.appendChild(libCard(it));
+    renderPager();
+  } catch (e) {
+    $('lib-grid').innerHTML = ''; $('lib-grid').appendChild(el('div', 'empty', '加载失败：' + e.message));
+  }
+}
+function renderPager() {
+  const l = state.lib, pages = Math.max(1, Math.ceil(l.total / l.size));
+  const box = $('lib-pager'); box.innerHTML = '';
+  const prev = el('button', '', '← 上一页'); prev.disabled = l.page <= 1; prev.onclick = () => { l.page--; loadLib(); };
+  const next = el('button', '', '下一页 →'); next.disabled = l.page >= pages; next.onclick = () => { l.page++; loadLib(); };
+  const info = el('span', 'pg', '第 ' + l.page + ' / ' + pages + ' 页 · 共 ' + l.total.toLocaleString() + ' 个');
+  box.appendChild(prev); box.appendChild(info); box.appendChild(next);
+}
+async function pollLib() {
+  try {
+    const st = await api('/api/refresh/status');
+    state.libMeta = st; renderLibStat();
+    if (state.view === 'lib' && !state.lib.q && state.lib.page === 1 && st.total !== state.lib.total) loadLib();
+  } catch (e) { }
+}
+
+/* -------------------------------- 安装 ----------------------------------- */
+function logLine(line) {
+  const box = $('log');
+  const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
+  box.textContent += (box.textContent ? '\n' : '') + line;
+  if (atBottom) box.scrollTop = box.scrollHeight;
+}
+function showConsole(title) {
+  $('console').classList.add('show');
+  $('job-title').textContent = title;
+  $('job-status').textContent = '启动中…';
+  $('job-status').className = 'status running';
+  $('log').textContent = '';
+}
+function setStatus(text, cls) { $('job-status').textContent = text; $('job-status').className = 'status ' + (cls || ''); }
+async function startJob(payload, kind, label) {
+  if (state.busy) { setStatus('已有任务在执行', 'running'); return; }
+  state.busy = true;
+  showConsole((kind === 'install' ? '安装 ' : '卸载 ') + (label || payload.id || payload.spec));
+  try {
+    const r = await api('/api/' + kind, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    logLine('任务已创建：' + r.action + ' ' + r.spec + '（profile: ' + r.profile + '）');
+    poll(r.jobId);
+  } catch (e) { logLine('!! ' + e.message); setStatus('失败', 'failed'); state.busy = false; }
+}
+function poll(jobId) {
+  clearInterval(state.timer);
+  let last = 0;
+  const tick = async () => {
+    try {
+      const job = await api('/api/job?id=' + jobId);
+      job.log.slice(last).forEach(logLine); last = job.log.length;
+      if (job.status === 'running' || job.status === 'queued') setStatus('执行中…', 'running');
+      if (job.status === 'done' || job.status === 'failed') {
+        clearInterval(state.timer); state.timer = null;
+        setStatus(job.status === 'done' ? '完成（重启 DSH 生效）' : '失败', job.status);
+        state.busy = false;
+        await loadAll();
+      }
+    } catch (e) { clearInterval(state.timer); state.timer = null; setStatus('状态读取失败', 'failed'); state.busy = false; }
+  };
+  state.timer = setInterval(tick, 700);
+  tick();
+}
+
+/* -------------------------------- 主流程 --------------------------------- */
+async function loadAll() {
+  try { state.data = await api('/api/catalog'); }
+  catch (e) { state.data = { catalog: { items: [] }, installed: {}, profiles: {} }; }
+  renderPicks();
+  await pollLib();
+}
+function switchTab(view) {
+  state.view = view;
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === view));
+  $('tab-picks').classList.toggle('hidden', view !== 'picks');
+  $('tab-lib').classList.toggle('hidden', view !== 'lib');
+  if (view === 'lib') loadLib();
+}
+document.querySelectorAll('.tab').forEach(t => t.onclick = () => switchTab(t.dataset.tab));
+
+$('refresh').onclick = () => { if (!state.busy) loadAll(); };
+$('rerun-diag').onclick = () => { if (!state.diagBusy) diagnose(); };
+$('custom-install').onclick = () => { const spec = $('spec').value.trim(); if (spec) startJob({ spec }, 'install', spec); };
+$('spec').addEventListener('keydown', e => { if (e.key === 'Enter') $('custom-install').click(); });
+$('close-console').onclick = () => $('console').classList.remove('show');
+$('shutdown').onclick = async () => {
+  if (!confirm('停止本地面板服务？浏览器页面会失效，但已安装的插件不受影响。')) return;
+  try { await fetch('/api/shutdown', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }); } catch (e) {}
+  document.body.innerHTML = '<div style="padding:60px;color:#8b949e;font:16px sans-serif">面板已停止，可关闭此页面。</div>';
+};
+$('lib-rescan').onclick = async () => {
+  try { await api('/api/refresh', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reset: true }) }); } catch (e) {}
+  pollLib();
+};
+$('lib-sort').onchange = () => { state.lib.sort = $('lib-sort').value; state.lib.page = 1; loadLib(); };
+$('lib-verified').onchange = () => { state.lib.verified = $('lib-verified').checked; state.lib.page = 1; loadLib(); };
+$('lib-q').addEventListener('input', () => {
+  clearTimeout(libSearchTimer);
+  libSearchTimer = setTimeout(() => { state.lib.q = $('lib-q').value.trim(); state.lib.page = 1; loadLib(); }, 350);
+});
+
+loadAll().then(() => { diagnose(); });
+if (location.hash === '#lib') switchTab('lib');
+setInterval(pollLib, 5000);
+</script>
+</body>
+</html>

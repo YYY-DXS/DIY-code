@@ -1,4 +1,4 @@
-<#
+﻿#
   按 manifest.json 校验并更新 apps 下的文件。
   用法：双击 更新所有软件.cmd，或 powershell -File check-update.ps1
 #>
@@ -16,7 +16,12 @@ $manifestRel = 'apps/manifest.json'
 function Get-RemoteBytes([string]$rel) {
     try {
         $resp = Invoke-WebRequest -Uri "$rawBase/$rel" -UseBasicParsing -TimeoutSec 20
-        if ($resp.StatusCode -eq 200) { return $resp.Content }
+        if ($resp.StatusCode -eq 200) {
+            # 用原始字节流，避免把 ico/png/exe 当文本写入后损坏
+            if ($null -ne $resp.RawContentStream) { return $resp.RawContentStream.ToArray() }
+            if ($resp.Content -is [byte[]]) { return $resp.Content }
+            return [Text.Encoding]::UTF8.GetBytes([string]$resp.Content)
+        }
     } catch { }
     try {
         $api = Invoke-RestMethod -Uri "$apiBase/$rel" -Headers @{ 'User-Agent' = 'diy-apps-updater' } -TimeoutSec 25
@@ -25,6 +30,22 @@ function Get-RemoteBytes([string]$rel) {
         }
     } catch { }
     return $null
+}
+
+function Test-TextFile([string]$path) {
+    $ext = [IO.Path]::GetExtension($path).ToLowerInvariant()
+    return -not ($ext -in @('.ico', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.exe', '.dll', '.zip', '.pdf', '.woff', '.woff2', '.mp4'))
+}
+
+function Get-NormalizedSha256([string]$path) {
+    $bytes = [IO.File]::ReadAllBytes($path)
+    if (Test-TextFile $path) {
+        # 本地可能是 CRLF，GitHub 上是 LF；比较前统一成 LF
+        $text = [Text.Encoding]::UTF8.GetString($bytes)
+        $bytes = [Text.Encoding]::UTF8.GetBytes(($text -replace "`r`n", "`n"))
+    }
+    $sha = [Security.Cryptography.SHA256]::Create()
+    return ([BitConverter]::ToString($sha.ComputeHash($bytes)) -replace '-', '').ToLowerInvariant()
 }
 
 Write-Host "检查更新：$repo" -ForegroundColor Cyan
@@ -46,7 +67,7 @@ foreach ($prop in $manifest.files.PSObject.Properties) {
     $local = Join-Path $repoRoot $rel
     $need = $true
     if (Test-Path -LiteralPath $local) {
-        $have = (Get-FileHash -Algorithm SHA256 -LiteralPath $local).Hash.ToLower()
+        $have = Get-NormalizedSha256 $local
         if ($have -eq $want) { $need = $false }
     }
     if (-not $need) { continue }
@@ -59,8 +80,16 @@ foreach ($prop in $manifest.files.PSObject.Properties) {
     }
     $dir = Split-Path -Parent $local
     if (-not (Test-Path -LiteralPath $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
-    if ($bytes -is [byte[]]) { [IO.File]::WriteAllBytes($local, $bytes) }
-    else { [IO.File]::WriteAllText($local, [string]$bytes, [Text.UTF8Encoding]::new($false)) }
+    if ($bytes -isnot [byte[]]) { $bytes = [Text.Encoding]::UTF8.GetBytes([string]$bytes) }
+    $ext = [IO.Path]::GetExtension($local).ToLowerInvariant()
+    if ((Test-TextFile $local) -and ($ext -in @('.cmd', '.bat', '.ps1'))) {
+        # Windows 批处理 / PowerShell 落盘时保持 CRLF
+        $text = [Text.Encoding]::UTF8.GetString($bytes)
+        $text = $text -replace "`r`n", "`n"
+        $text = $text -replace "`n", "`r`n"
+        $bytes = [Text.Encoding]::UTF8.GetBytes($text)
+    }
+    [IO.File]::WriteAllBytes($local, $bytes)
     Write-Host "  更新：$rel" -ForegroundColor Green
     $updated++
 }

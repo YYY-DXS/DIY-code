@@ -77,10 +77,15 @@ $env:BILIBILI_COOKIE = "SESSDATA=xxx; bili_jct=xxx"
 ## 常用命令
 
 ```powershell
-npm start
-npm test
-npm run dev
+npm install          # 安装依赖（也支持 pnpm install）
+npm start            # 以源码方式启动
+npm test             # 跑单元测试
+npm run dev          # 改代码时自动重启
+npm run build:exe    # 打包成 TechPulse.exe（需要 Node 在 PATH 里）
 ```
+
+`build:exe` 会生成 `apps/TechPulse/TechPulse.exe` 与配套文件；打包完成后可直接运行
+`create-shortcuts.ps1` 创建快捷方式。
 
 端口默认是 `4173`，可设置 `PORT` 环境变量改变端口。
 

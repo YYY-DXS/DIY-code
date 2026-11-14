@@ -1,4 +1,4 @@
-$ErrorActionPreference = "Stop"
+﻿$ErrorActionPreference = "Stop"
 $desktop = [Environment]::GetFolderPath("Desktop")
 $startup = [Environment]::GetFolderPath("Startup")
 $targets = @(

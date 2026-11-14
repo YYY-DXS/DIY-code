@@ -1,4 +1,4 @@
-$ErrorActionPreference = "Stop"
+﻿$ErrorActionPreference = "Stop"
 $targetPath = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot "TechPulse.exe"))
 $listening = netstat -ano | Select-String ':4173\s+.*LISTENING'
 if (-not $listening) {

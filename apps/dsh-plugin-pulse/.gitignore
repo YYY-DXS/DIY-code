@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# PyInstaller
+build/
+dist/
+
+# 运行产物
+release/*.tmp
+*.log
+
+# 本地数据
+.catalog.local.json

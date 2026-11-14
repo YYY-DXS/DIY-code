@@ -211,7 +211,13 @@ const releaseData = path.join(RELEASE_ROOT, "data");
 try {
   await stat(releaseData);
 } catch {
-  await cp(path.join(ROOT, "data"), releaseData, { recursive: true });
+  await mkdir(releaseData, { recursive: true });
+  try {
+    await cp(path.join(ROOT, "data"), releaseData, { recursive: true });
+  } catch (error) {
+    // 全新检出时 data/ 还不存在（被 .gitignore 忽略），留一个空目录即可。
+    if (error.code !== "ENOENT") throw error;
+  }
 }
 const releaseFiles = [
   ["release-readme.md", "使用说明.md"],

@@ -1,0 +1,49 @@
+{
+  "generatedAt": "2026-11-08",
+  "dshVersion": "0.2.2-rc.1",
+  "defaultProfile": "desktop",
+  "items": [
+    {
+      "id": "modlens",
+      "name": "modlens",
+      "spec": "@liustack/modlens@latest",
+      "bundle": "@liustack/modlens",
+      "profile": "desktop",
+      "category": "Vision / 工具",
+      "summary": "给纯文本模型装上眼睛：粘贴截图即可返回 OCR、版面区域与实体关系的结构化证据。",
+      "verified": "Verified · 4258★ · MIT · 2026-10-04",
+      "risk": "high",
+      "riskNote": "dshbase 静态扫描 High（含 Dangerous command）；首次使用需自备视觉引擎额度（免费 Gemini key 或复用已登录 CLI）。",
+      "source": "https://dshbase.com/plugins/modlens/",
+      "command": "dsh plugin --profile desktop add @liustack/modlens@latest"
+    },
+    {
+      "id": "dsh-tui",
+      "name": "dsh-TUI",
+      "spec": "@deepseek-harness-tui/dsh-tui",
+      "bundle": "@deepseek-harness-tui/dsh-tui",
+      "profile": "dsh-tui",
+      "category": "Terminal / UI",
+      "summary": "官方没有终端 TUI，这个补上 Claude Code 风格的全屏终端，并支持迁移 Claude Code / Codex 历史会话。",
+      "verified": "Verified · 4597★ · MIT · 2026-10-13",
+      "risk": "low",
+      "riskNote": "装在独立的 dsh-tui profile，不影响 desktop；装完需在终端执行 dsh-tui（或 dsh --profile dsh-tui）启动。README 明确不支持 git 源安装。",
+      "source": "https://dshbase.com/plugins/dsh-TUI/",
+      "command": "dsh plugin --profile dsh-tui add @deepseek-harness-tui/dsh-tui"
+    },
+    {
+      "id": "better-sidebar",
+      "name": "DSH-better-sidebar",
+      "spec": "dsh-better-sidebar@latest",
+      "bundle": "dsh-better-sidebar",
+      "profile": "desktop",
+      "category": "UI / 工作台",
+      "summary": "把 Web 右侧栏变成工作台：可编辑代码编辑器、增强文件树、Git 变更面板、子代理任务页、侧边对话。",
+      "verified": "Verified · 4175★ · MIT · 2026-10-12",
+      "risk": "medium",
+      "riskNote": "v0.23.0 起文件系统路由取消工作区围栏，可读写用户可访问的任意路径；peer 要求 ^0.2.2-rc.1（本机 0.2.2-rc.1 满足）。",
+      "source": "https://dshbase.com/plugins/DSH-better-sidebar/",
+      "command": "dsh plugin --profile desktop add dsh-better-sidebar@latest"
+    }
+  ]
+}

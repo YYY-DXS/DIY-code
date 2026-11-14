@@ -15,14 +15,57 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Verify sources
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $roots = @('apps', 'plugins', 'extras', 'tools')
+
+          $version = (Get-Content VERSION -Raw).Trim()
+          if ($env:GITHUB_REF_NAME -ne "v$version") {
+            throw "标签 $($env:GITHUB_REF_NAME) 与 VERSION $version 不一致"
+          }
+
+          Get-ChildItem -Path $roots -Recurse -Include *.json -File | ForEach-Object {
+            try { Get-Content -LiteralPath $_.FullName -Raw -Encoding UTF8 | ConvertFrom-Json | Out-Null }
+            catch { throw "JSON 解析失败：$($_.FullName) — $($_.Exception.Message)" }
+          }
+
+          $node = (Get-Command node -ErrorAction Stop).Source
+          Get-ChildItem -Path $roots -Recurse -Include *.js, *.mjs -File |
+            Where-Object { $_.FullName -notmatch '\\node_modules\\|\\build\\' } |
+            ForEach-Object {
+              & $node --check $_.FullName
+              if ($LASTEXITCODE -ne 0) { throw "JS 语法错误：$($_.FullName)" }
+            }
+
+          Get-ChildItem -Path $roots -Recurse -Include *.py -File |
+            Where-Object { $_.FullName -notmatch '\\__pycache__\\' } |
+            ForEach-Object {
+              python -c "import ast,sys; ast.parse(open(sys.argv[1], encoding='utf-8').read(), filename=sys.argv[1])" $_.FullName
+              if ($LASTEXITCODE -ne 0) { throw "Python 语法错误：$($_.FullName)" }
+            }
+
+          Get-ChildItem -Path $roots -Recurse -Include *.ps1 -File | ForEach-Object {
+            $tokens = $null; $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$tokens, [ref]$errors) | Out-Null
+            if ($errors.Count -gt 0) { throw "PowerShell 语法错误：$($_.FullName) — $($errors[0].Message)" }
+          }
+
+          Write-Host "源码检查通过。"
+
       - name: Package apps
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path dist | Out-Null
-          Get-ChildItem -Path apps -Directory | ForEach-Object {
-            $name = $_.Name
-            Compress-Archive -Path $_.FullName -DestinationPath (Join-Path dist "$name.zip") -Force
-          }
+          $roots = @('apps', 'plugins', 'extras')
+          Get-ChildItem -Path $roots -Directory |
+            Where-Object { $_.Name -notin @('outputs', 'build', 'node_modules', 'dist', 'release', 'pages', 'TechPulse') } |
+            ForEach-Object {
+              $name = $_.Name
+              Compress-Archive -Path $_.FullName -DestinationPath (Join-Path dist "$name.zip") -Force
+            }
+          Compress-Archive -Path tools -DestinationPath (Join-Path dist 'tools.zip') -Force
           $lines = Get-ChildItem -Path dist -Filter *.zip | ForEach-Object {
             $hash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLower()
             "$hash  $($_.Name)"

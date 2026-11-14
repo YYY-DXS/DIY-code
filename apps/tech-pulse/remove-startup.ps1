@@ -1,4 +1,4 @@
-$startup = [Environment]::GetFolderPath("Startup")
+﻿$startup = [Environment]::GetFolderPath("Startup")
 $shortcut = Join-Path $startup "科技脉冲.lnk"
 if (Test-Path $shortcut) {
   Remove-Item -LiteralPath $shortcut -Force

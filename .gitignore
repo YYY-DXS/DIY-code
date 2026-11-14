@@ -7,6 +7,8 @@
 *.html
 # 但科技脉冲的前端入口必须进仓库，否则 Release 包打开就 404
 !apps/tech-pulse/public/index.html
+# DSH 插件安装面板的界面文件同样是源码
+!apps/dsh-plugin-pulse/ui.html
 tools/auto-publish/state.json
 tools/auto-publish/seed_published.json
 

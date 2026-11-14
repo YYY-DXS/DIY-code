@@ -1,7 +1,10 @@
-# 科技脉冲 1.1
+# 科技脉冲
 
 双击 `TechPulse.exe`，或使用桌面上的“科技脉冲”快捷方式。
 程序会启动本地日报服务，并在独立的 WebView2 桌面窗口中展示，不打开系统浏览器。
+
+> 如果你拿到的是源码包（没有 `TechPulse.exe`）：双击 `start.cmd`（需要 Node.js 20+），
+> 或先运行 `npm install` 和 `npm run build:exe` 生成 exe。`create-shortcuts.ps1` 会自动判断用哪种方式。
 
 ## 已配置
 

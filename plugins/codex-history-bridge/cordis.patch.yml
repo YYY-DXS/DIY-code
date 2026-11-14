@@ -1,0 +1,9 @@
+- insert:
+    - id: codex-history-bridge
+      name: '@local/codex-history-bridge'
+      config:
+        outputDir: codex-history
+        includeArchived: true
+        includeRaw: true
+        fullToolOutputs: false
+        toolOutputLimit: 8000

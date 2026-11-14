@@ -10,6 +10,13 @@
     "test": "node --test",
     "build:exe": "node build-exe.mjs"
   },
+  "devDependencies": {
+    "esbuild-wasm": "^0.28.2",
+    "pe-library": "^2.0.1",
+    "postject": "^1.0.0-alpha.6",
+    "resedit": "^3.1.0",
+    "webview-node": "^0.1.5"
+  },
   "engines": {
     "node": ">=20"
   }

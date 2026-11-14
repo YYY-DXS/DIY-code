@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Query bridge",
+    "description": "Ask the conversation for live GitHub repository status, the DeepSeek account balance and models, and the Codex conversations already imported into the workspace."
+  }
+}

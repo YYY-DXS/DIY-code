@@ -1,4 +1,4 @@
-$ErrorActionPreference = "Stop"
+﻿$ErrorActionPreference = "Stop"
 $appRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $port = if ($env:PORT) { $env:PORT } else { "4173" }
 $url = "http://127.0.0.1:$port"

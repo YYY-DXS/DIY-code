@@ -1,0 +1,13 @@
+- insert:
+    - id: deepseek-hub
+      name: '@local/deepseek-hub'
+      config:
+        # 改成你自己的路径；也可以不填，用环境变量 DEEPSEEK_HUB_KNOWLEDGE 等覆盖
+        knowledgeDir: 'C:\path\to\knowledge\deepseek-web'
+        profileDir: 'C:\path\to\deepseek-hub-profile'
+        edgePath: 'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe'
+        repoDir: 'C:\path\to\DIY-code'
+        pythonPath: ''
+        port: 9390
+        autoSyncMinutes: 60
+        dailyPublishAt: '20:00'

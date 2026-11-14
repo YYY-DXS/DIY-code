@@ -1,0 +1,32 @@
+{
+  "name": "@local/deepseek-hub",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Sync DeepSeek web conversations into a local Markdown knowledge base through a controlled browser, and publish new DIY projects to GitHub.",
+  "type": "module",
+  "exports": {
+    ".": "./index.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "index.js",
+    "cordis.patch.yml",
+    "scripts/hub-sync.mjs",
+    "scripts/mini-ws.mjs",
+    "scripts/build-jsonl.mjs",
+    "desktop/HubPanel.ps1",
+    "desktop/Launcher.cs",
+    "desktop/DeepSeekHubPanel.exe",
+    "desktop/app.ico",
+    "desktop/启动面板.cmd",
+    "locale/*.json",
+    "icon.svg",
+    "README.md"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  }
+}

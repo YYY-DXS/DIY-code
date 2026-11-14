@@ -1,4 +1,4 @@
-<#
+﻿<#
     电脑管家 PcToolkit - 公共基础模块
     职责：控制台输出、日志、权限提升、确认交互、目录体积统计、备份、外部命令调用
     兼容：Windows PowerShell 5.1 与 PowerShell 7+

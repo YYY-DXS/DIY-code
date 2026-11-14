@@ -1,0 +1,5 @@
+# Windows 批处理和 PowerShell 在检出/打包时保持 CRLF；Git 内部按 LF 存储。
+# 配合 check-update.ps1 的归一化哈希，GitHub 上的 LF 与本地 CRLF 都能正确比较。
+*.cmd text eol=crlf
+*.bat text eol=crlf
+*.ps1 text eol=crlf

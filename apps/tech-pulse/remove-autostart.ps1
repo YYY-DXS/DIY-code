@@ -1,4 +1,4 @@
-$taskName = "TechPulse-DailyBriefing"
+﻿$taskName = "TechPulse-DailyBriefing"
 $task = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
 if (-not $task) {
   Write-Output "未找到自动启动任务，无需移除。"
