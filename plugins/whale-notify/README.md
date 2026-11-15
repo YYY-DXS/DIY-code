@@ -15,6 +15,10 @@ something.
   The card fades after seven seconds, pauses while you hover it, and dismisses
   from its × button.
 - Inner subagent Sessions never alert, so one task cannot chime twice.
+- **Floating mascot** — the same whale girl stands in the corner of the window with
+  the live status: **运行中 / 等你回复 / 刚完成 / 空闲** (Running / Waiting for you /
+  Finished / Idle). Drag her anywhere and the position is remembered; the × in her
+  corner hides her, and **Settings > General > Floating mascot** brings her back.
 
 ## The character
 
