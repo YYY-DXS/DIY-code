@@ -1,6 +1,6 @@
 {
   "meta": {
     "title": "Whale alerts",
-    "description": "Plays a chime and shows a small whale card when a turn finishes, or when DSH is waiting for you to answer a question or approve an action. Each alert names its Session; click the card to open it. Chime and card can be turned off separately under Settings > General > Whale alerts."
+    "description": "Plays a chime and shows a small whale card when a turn finishes, or when DSH is waiting for you to answer a question or approve an action. Each alert names its Session; click the card to open it. Chime and card can be turned off separately under Settings > General > Whale alerts, where Try it previews them."
   }
 }

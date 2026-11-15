@@ -22,6 +22,10 @@ To turn either half off, open **Settings** (sidebar foot) > **General** >
 **Whale alerts**, and use the **Chime** and **Whale card** switches. The choices
 persist in this browser (`localStorage`) and apply immediately.
 
+**Try it** beside those switches shows one alert on demand: the first click shows
+the finished-turn card with its chime, the next click shows the waiting-for-you
+card, and so on. It ignores the two switches on purpose, so the test always plays.
+
 ## How it knows
 
 The Web client already keeps one status snapshot per Session for the sidebar:

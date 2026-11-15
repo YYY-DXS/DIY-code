@@ -42,6 +42,8 @@ window.__ModuleLoader__.load({
         'settings.desc': '任务完成或等你回复时，播放提示音并弹出鲸鱼卡片。',
         'settings.sound': '提示音',
         'settings.visual': '鲸鱼卡片',
+        'settings.preview': '试一下',
+        'settings.previewHint': '立即播放一次提示音并显示鲸鱼卡片（两种卡片轮流出现）',
       },
       en: {
         'done.title': 'All done',
@@ -57,6 +59,8 @@ window.__ModuleLoader__.load({
         'settings.desc': 'Play a chime and show a whale card when a turn finishes or waits for your reply.',
         'settings.sound': 'Chime',
         'settings.visual': 'Whale card',
+        'settings.preview': 'Try it',
+        'settings.previewHint': 'Play the chime and show the card now (the two card kinds alternate)',
       },
     }
 
@@ -274,6 +278,9 @@ window.__ModuleLoader__.load({
       '.dsh-whale-rowTitle{font-size:14px;font-weight:400;line-height:22px;color:var(--dsw-alias-label-primary,#1c1c1c)}',
       '.dsh-whale-rowDesc{font-size:12px;line-height:18px;color:var(--dsw-alias-label-secondary,#6b6b6b)}',
       '.dsh-whale-switches{display:flex;flex:none;flex-wrap:wrap;gap:8px;justify-content:flex-end}',
+      '.dsh-whale-preview{height:36px;padding:0 14px;border:0.5px solid var(--dsw-alias-border-l2,rgba(0,0,0,.12));border-radius:var(--dsw-radius-md,10px);background:transparent;color:var(--dsw-alias-label-primary,#1c1c1c);font:inherit;font-size:14px;line-height:22px;cursor:pointer}',
+      '.dsh-whale-preview:hover{background:var(--dsw-alias-bg-layer-2,rgba(0,0,0,.06))}',
+      '.dsh-whale-preview:focus-visible{outline:2px solid var(--dsw-alias-brand-primary,#4d6bfe);outline-offset:2px}',
       '.dsh-whale-switch{display:inline-flex;align-items:center;gap:8px;height:36px;padding:0 14px;border:0;border-radius:var(--dsw-radius-md,10px);background:var(--dsw-alias-bg-layer-2,rgba(0,0,0,.06));color:var(--dsw-alias-label-primary,#1c1c1c);font:inherit;font-size:14px;line-height:22px;cursor:pointer}',
       '.dsh-whale-switch:hover{background:var(--dsw-alias-bg-layer-1,rgba(0,0,0,.03))}',
       '.dsh-whale-switch:focus-visible{outline:2px solid var(--dsw-alias-brand-primary,#4d6bfe);outline-offset:2px}',
@@ -434,6 +441,36 @@ window.__ModuleLoader__.load({
         }
 
         /**
+         * Show one card, keeping only the newest few.
+         * @param kind - `done`, `ask`, or `approval`.
+         * @param sessionId - Session the card opens; empty for a preview card.
+         * @param title - Session display title, possibly empty.
+         */
+        const pushCard = (kind, sessionId, title) => {
+          const item = { id: sequence + 1, kind, sessionId, title, at: Date.now() }
+          sequence = item.id
+          const items = cardStore.get().items.concat(item)
+          cardStore.set({ items: items.slice(-MAX_CARDS) })
+        }
+
+        /**
+         * The Session the user is looking at, for the preview card's title.
+         * @returns its identity and title, or undefined when no row is known.
+         */
+        const currentSession = () => {
+          if (sessions === undefined) return undefined
+          try {
+            const rows = Object.values(sessions.list.getSnapshot().byId)
+            const row = rows.find(candidate => (candidate.retainedBy.mainView ?? 0) > 0)
+              ?? rows.find(candidate => candidate.origin !== 'subagent')
+            if (row === undefined) return undefined
+            return { id: row.id, title: typeof row.displayTitle === 'string' ? row.displayTitle : '' }
+          } catch (error) {
+            return undefined
+          }
+        }
+
+        /**
          * Announce one edge: chime now, card when enabled.
          * @param kind - `done`, `ask`, or `approval`.
          * @param sessionId - the Session the alert belongs to.
@@ -449,10 +486,7 @@ window.__ModuleLoader__.load({
           lastAt = now
           chime(kind)
           if (!prefs.visual) return
-          const item = { id: sequence + 1, kind, sessionId, title, at: now }
-          sequence = item.id
-          const items = cardStore.get().items.concat(item)
-          cardStore.set({ items: items.slice(-MAX_CARDS) })
+          pushCard(kind, sessionId, title)
         }
 
         /**
@@ -471,6 +505,7 @@ window.__ModuleLoader__.load({
          */
         const openItem = (item) => {
           dismiss(item.id)
+          if (item.sessionId === '') return
           if (workspace === undefined || typeof workspace.openSession !== 'function') return
           try {
             workspace.openSession(item.sessionId)
@@ -489,6 +524,22 @@ window.__ModuleLoader__.load({
           writePrefs(prefs)
           prefStore.set(prefs)
         }
+
+        /** Alternate the preview between the two cards the plugin shows on its own. */
+        let previewFlip = false
+
+        /**
+         * Show one alert on demand, ignoring the two switches: this is an explicit
+         * test, so it must be visible and audible whatever the saved choices are.
+         */
+        const preview = () => {
+          previewFlip = !previewFlip
+          const kind = previewFlip ? 'ask' : 'done'
+          const current = currentSession()
+          chime(kind)
+          pushCard(kind, current === undefined ? '' : current.id, current === undefined ? '' : current.title)
+        }
+
 
         /** The alert kind one pending interaction deserves. */
         const askKindOf = (interaction) => {
@@ -605,7 +656,14 @@ window.__ModuleLoader__.load({
                 h('div', { className: 'dsh-whale-rowTitle' }, t('settings.title')),
                 h('div', { className: 'dsh-whale-rowDesc' }, t('settings.desc')),
               ),
-              h('div', { className: 'dsh-whale-switches' }, rows.map(row => h('button', {
+              h('div', { className: 'dsh-whale-switches' },
+                h('button', {
+                  type: 'button',
+                  className: 'dsh-whale-preview',
+                  title: t('settings.previewHint'),
+                  onClick: () => { preview() },
+                }, t('settings.preview')),
+                rows.map(row => h('button', {
                 key: row.key,
                 type: 'button',
                 role: 'switch',
