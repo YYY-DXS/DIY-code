@@ -297,7 +297,7 @@ window.__ModuleLoader__.load({
       } else {
         parts.push(
           h('rect', { key: 'bubble', className: 'dsh-wg-bubble', x: 70, y: 8, width: 24, height: 17, rx: 5.5, fill: '#eef8ff', stroke: '#9fd0ef', strokeWidth: 1.2 }),
-          h('g', { key: 'dots', className: 'dsh-wg-bubble' }, [
+          h('g', { key: 'dots' }, [
             h('circle', { key: 'd1', className: 'dsh-wg-dot', cx: 77.5, cy: 16.5, r: 1.7, fill: EYE }),
             h('circle', { key: 'd2', className: 'dsh-wg-dot dsh-wg-dot-2', cx: 82, cy: 16.5, r: 1.7, fill: EYE }),
             h('circle', { key: 'd3', className: 'dsh-wg-dot dsh-wg-dot-3', cx: 86.5, cy: 16.5, r: 1.7, fill: EYE }),
@@ -337,7 +337,7 @@ window.__ModuleLoader__.load({
       '@keyframes dsh-wg-tail{0%,100%{transform:rotate(-5deg)}50%{transform:rotate(7deg)}}',
       '.dsh-wg-eye{transform-box:view-box;transform-origin:50px 48px;animation:dsh-wg-blink 4.6s infinite}',
       '@keyframes dsh-wg-blink{0%,90%,100%{transform:scaleY(1)}93%{transform:scaleY(.08)}96%{transform:scaleY(1)}}',
-      '.dsh-wg-bubble{animation:dsh-wg-pop .34s cubic-bezier(.2,.9,.3,1.2) both}',
+      '.dsh-wg-bubble{transform-box:view-box;transform-origin:82px 16.5px;animation:dsh-wg-pop .34s cubic-bezier(.2,.9,.3,1.2) both}',
       '@keyframes dsh-wg-pop{0%{opacity:0;transform:translateY(4px) scale(.7)}100%{opacity:1;transform:none}}',
       '.dsh-wg-dot{animation:dsh-wg-dot 1.5s ease-in-out infinite}',
       '.dsh-wg-dot-2{animation-delay:.2s}',
