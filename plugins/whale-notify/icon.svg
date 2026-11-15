@@ -1,12 +1,29 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36" role="img" aria-label="Whale">
-  <g transform="translate(2.4 3.4) scale(0.5)">
-    <circle cx="25" cy="10" r="2.6" fill="#6FB6DC"/>
-    <circle cx="31" cy="5.6" r="2" fill="#6FB6DC"/>
-    <circle cx="19.4" cy="6.4" r="1.8" fill="#6FB6DC"/>
-    <path d="M13 30C7 26 3.4 20 5.2 14.6 9.4 16.8 13.4 21 15.4 26.2 17.4 21 21.4 16.8 25.6 14.6 27.4 20 23.8 26 17.8 30Z" fill="#3F86B8"/>
-    <path d="M14 30C14 20.2 22.4 13 34.6 13 46.8 13 55.6 20.2 55.6 29.4 55.6 38.6 46.8 43.8 34.6 43.8 22.4 43.8 14 39 14 30Z" fill="#4C9BD0"/>
-    <path d="M29.6 40.4C31 45.4 35.6 48 40 46.4 36.4 44.2 34.4 42.2 33.4 39.8Z" fill="#3F86B8"/>
-    <circle cx="47.2" cy="25.4" r="2.9" fill="#12354A"/>
-    <path d="M44.2 33.4q4.2 3.2 8.2 0" fill="none" stroke="#12354A" stroke-width="3.2" stroke-linecap="round"/>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36" role="img" aria-label="Whale girl">
+  <ellipse cx="18" cy="18" rx="13" ry="13.5" fill="#3559B8"/>
+  <ellipse cx="18" cy="24" rx="11" ry="6.4" fill="#4FA8E8" opacity="0.9"/>
+  <path d="M8 20C4 19.6 1.6 16.6 1 13.4 4.2 12.6 7.4 15 9 18Z" fill="#24346B"/>
+  <path d="M7 18.6C4.4 18 2.8 16 2.2 14 4.4 13.6 6.2 15.2 7.4 17.2Z" fill="#3D5A9E"/>
+  <path d="M28 20C32 19.6 34.4 16.6 35 13.4 31.8 12.6 28.6 15 27 18Z" fill="#24346B"/>
+  <path d="M29 18.6C31.6 18 33.2 16 33.8 14 31.6 13.6 29.8 15.2 28.6 17.2Z" fill="#3D5A9E"/>
+  <ellipse cx="18" cy="18.5" rx="8.6" ry="8.4" fill="#FFE6D8"/>
+  <path d="M9.4 18.6C9 11 13 8.2 18 8.2 23 8.2 27 11 26.6 18.6 25.4 15.6 23.6 14 21.8 15 20 16 19 17.2 18 16.4 17 15.6 16 16 14.2 15 12.4 14 10.6 15.6 9.4 18.6Z" fill="#3E63C4"/>
+  <path d="M9.8 15C9.4 9.6 13.2 6.4 18 6.4 22.8 6.4 26.6 9.6 26.2 15 25.4 11.4 22.2 8.8 18 8.8 13.8 8.8 10.6 11.4 9.8 15Z" fill="#FFFFFF"/>
+  <circle cx="12.2" cy="11.6" r="1.1" fill="#FFFFFF"/>
+  <circle cx="18" cy="10.3" r="1.1" fill="#FFFFFF"/>
+  <circle cx="23.8" cy="11.6" r="1.1" fill="#FFFFFF"/>
+  <path d="M18 7C17.4 3.4 19.6 1.4 21.6 1.6 23.6 1.8 24.4 3.4 23.4 4.9 22.4 6.3 20.4 5.4 20.4 4" fill="none" stroke="#3559B8" stroke-width="1.6" stroke-linecap="round"/>
+  <ellipse cx="14.6" cy="19.6" rx="2.6" ry="3.1" fill="#FFFFFF"/>
+  <ellipse cx="14.6" cy="19.9" rx="2" ry="2.5" fill="#2E7FD0"/>
+  <ellipse cx="14.6" cy="20" rx="1" ry="1.5" fill="#16305E"/>
+  <circle cx="13.6" cy="18.4" r="0.9" fill="#FFFFFF"/>
+  <ellipse cx="21.4" cy="19.6" rx="2.6" ry="3.1" fill="#FFFFFF"/>
+  <ellipse cx="21.4" cy="19.9" rx="2" ry="2.5" fill="#2E7FD0"/>
+  <ellipse cx="21.4" cy="20" rx="1" ry="1.5" fill="#16305E"/>
+  <circle cx="20.4" cy="18.4" r="0.9" fill="#FFFFFF"/>
+  <ellipse cx="11.6" cy="22.2" rx="1.8" ry="0.95" fill="#FFB3C0" opacity="0.8"/>
+  <ellipse cx="24.4" cy="22.2" rx="1.8" ry="0.95" fill="#FFB3C0" opacity="0.8"/>
+  <path d="M16.9 23.4Q18 24.8 19.1 23.4" fill="none" stroke="#C4697B" stroke-width="0.8" stroke-linecap="round"/>
+  <path d="M14.6 26.8C15.6 25.8 16.8 25.6 18 26.4 19.2 25.6 20.4 25.8 21.4 26.8 20 27.8 16 27.8 14.6 26.8Z" fill="#FFFFFF"/>
+  <path d="M14 26.6C16 25.8 20 25.8 22 26.6L23.6 32C20.6 33.4 15.4 33.4 12.4 32Z" fill="#24346B"/>
+  <path d="M12.4 32C15.4 33.4 20.6 33.4 23.6 32L24 32.9C20.6 34.3 15.4 34.3 12 32.9Z" fill="#FFFFFF"/>
 </svg>

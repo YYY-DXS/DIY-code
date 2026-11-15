@@ -1,17 +1,45 @@
 # Whale alerts
 
-A chime and a little whale for the two moments you are not looking at the page:
-a turn just finished, or DSH is waiting for you to answer something.
+A chime and the community whale girl (鲸鱼娘) for the two moments you are not
+looking at the page: a turn just finished, or DSH is waiting for you to answer
+something.
 
 ## What it does
 
-- **Turn finished** — a warm two-note "bloop" and a whale that catches a fish snack.
-- **Waiting for you** — a brighter three-note chime and a whale with a "…" speech
-  bubble. This covers `ask_user_question`, plan reviews, and approval requests.
+- **Turn finished** — a warm two-note "bloop"; the whale girl blinks and holds up
+  a bowl of white rice with steam rising.
+- **Waiting for you** — a brighter three-note chime; she stands beside a "…"
+  speech bubble. This covers `ask_user_question`, plan reviews, and approval
+  requests.
 - Each card names the Session it belongs to; click the card to open that Session.
   The card fades after seven seconds, pauses while you hover it, and dismisses
   from its × button.
 - Inner subagent Sessions never alert, so one task cannot chime twice.
+
+## The character
+
+Blue gradient hair, the loop cowlick, whale-fin ears, the white ruffled maid
+headdress and apron, the navy dress and the big whale tail — the card draws the
+community **鲸鱼娘 / 蓝色大肥鱼**, DeepSeek's fan-made personification.
+
+The design traits are documented by the community spec
+[deepseek-whalechan](https://github.com/Neko3000/deepseek-whalechan); the character
+itself traces back to Bilibili creators
+[上善无形](https://space.bilibili.com/4456176) (the original character 溟月) and
+[ZipZipPipe](https://space.bilibili.com/4168597) (who merged in the whale and maid
+elements).
+
+The drawing here is an **original flat-vector chibi** built from those traits:
+plain SVG paths inside `client.js`, no fan artwork copied, traced, or bundled.
+It is an unofficial fan work with no affiliation or endorsement from DeepSeek.
+The character chain is released under CC BY-NC-SA 4.0, and this rendering follows
+it; see [ART_LICENSE.md](ART_LICENSE.md) for the exact attribution line, the code
+license (MIT), and the non-commercial term.
+
+Animation is CSS-only on the SVG groups: idle bob, cowlick sway, fin flap, tail
+wag, a blink every ~4.6 s, rising steam, and pulsing bubble dots. `prefers-reduced-motion`
+turns all of it off.
+
 
 ## Use it
 

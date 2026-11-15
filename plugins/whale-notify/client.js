@@ -180,75 +180,134 @@ window.__ModuleLoader__.load({
     }
 
     /**
-     * Build the whale drawing for one alert.
-     * @param kind - `done`, `ask`, or `approval`.
+     * Build the chibi whale-girl drawing for one alert.
+     *
+     * The character is the community `鲸鱼娘` (DeepSeek whale girl): blue gradient
+     * hair, the loop cowlick, whale-fin ears, a white ruffled maid headdress, the
+     * navy dress with a white apron, and the big whale tail. This is an original
+     * flat-vector rendering of those shared design traits — no artwork from any
+     * fan source is embedded or traced.
+     * @param kind - `done` (holding the rice bowl), `ask`, or `approval` (speech bubble).
      * @returns the SVG element.
      */
-    function whaleArt(kind) {
-      const parts = [
-        h('circle', { key: 'spout-1', cx: 25, cy: 10, r: 2.6, fill: '#bfe4f8' }),
-        h('circle', { key: 'spout-2', cx: 31, cy: 5.6, r: 2, fill: '#bfe4f8' }),
-        h('circle', { key: 'spout-3', cx: 19.4, cy: 6.4, r: 1.8, fill: '#bfe4f8' }),
-        h('path', {
-          key: 'tail',
-          d: 'M13 30C7 26 3.4 20 5.2 14.6 9.4 16.8 13.4 21 15.4 26.2 17.4 21 21.4 16.8 25.6 14.6 27.4 20 23.8 26 17.8 30Z',
-          fill: '#5fa8d3',
-        }),
-        h('path', {
-          key: 'body',
-          d: 'M14 30C14 20.2 22.4 13 34.6 13 46.8 13 55.6 20.2 55.6 29.4 55.6 38.6 46.8 43.8 34.6 43.8 22.4 43.8 14 39 14 30Z',
-          fill: '#7cc4ee',
-        }),
-        h('path', {
-          key: 'belly',
-          d: 'M20.4 33.4C20.4 39 26.2 43.8 34.6 43.8 43 43.8 48.8 39 48.8 33.4 45 37.4 24.2 37.4 20.4 33.4Z',
-          fill: '#e9f7ff',
-        }),
-        h('path', {
-          key: 'fin',
-          d: 'M29.6 40.4C31 45.4 35.6 48 40 46.4 36.4 44.2 34.4 42.2 33.4 39.8Z',
-          fill: '#5fa8d3',
-        }),
-        h('path', {
-          key: 'eye',
-          d: 'M42.6 25.4q3-3.4 6 0',
-          fill: 'none',
-          stroke: '#173a4e',
-          strokeWidth: 2,
-          strokeLinecap: 'round',
-        }),
-        h('ellipse', { key: 'blush', cx: 49.6, cy: 29.4, rx: 3.4, ry: 2.1, fill: '#ffb3c7', opacity: 0.85 }),
-        h('path', {
-          key: 'mouth',
-          d: 'M44.6 33.6q4 3 7.8 0',
-          fill: 'none',
-          stroke: '#173a4e',
-          strokeWidth: 1.6,
-          strokeLinecap: 'round',
-        }),
+    function whaleGirl(kind) {
+      const HAIR = '#3559b8'
+      const HAIR_LIGHT = '#4fa8e8'
+      const NAVY = '#24346b'
+      const FIN_INNER = '#3d5a9e'
+      const SKIN = '#ffe6d8'
+      const SKIN_SHADE = '#f2cdb9'
+      const BLUSH = '#ffb3c0'
+      const EYE = '#2e7fd0'
+      const EYE_DARK = '#16305e'
+      const LASH = '#1e2f66'
+      const GOLD = '#c9a24b'
+
+      const eye = (cx, key) => [
+        h('ellipse', { key: key + '-white', cx, cy: 48.5, rx: 5.6, ry: 6.6, fill: '#ffffff' }),
+        h('ellipse', { key: key + '-iris', cx, cy: 49, rx: 4.3, ry: 5.3, fill: EYE }),
+        h('ellipse', { key: key + '-pupil', cx, cy: 49.4, rx: 2.1, ry: 3.1, fill: EYE_DARK }),
+        h('circle', { key: key + '-shine', cx: cx - 1.8, cy: 46.2, r: 1.8, fill: '#ffffff' }),
+        h('circle', { key: key + '-spark', cx: cx + 1.7, cy: 52, r: 0.9, fill: '#bfe8ff' }),
       ]
-      if (kind === 'done') {
-        parts.push(h('g', { key: 'snack', className: 'dsh-whale-snack' },
-          h('ellipse', { cx: 60.5, cy: 33.5, rx: 4.4, ry: 2.9, fill: '#ffb15c' }),
-          h('path', { d: 'M64.4 33.5 68.6 30.6 68.6 36.4Z', fill: '#ffb15c' }),
-          h('circle', { cx: 58.4, cy: 32.6, r: 0.75, fill: '#6b3f12' }),
-        ))
-      } else {
-        parts.push(h('g', { key: 'bubble', className: 'dsh-whale-bubble' },
+
+      const parts = [
+        // Long hair mass, the lighter ends, and the whale tail behind the body.
+        h('ellipse', { key: 'hair', cx: 50, cy: 48, rx: 31, ry: 37, fill: HAIR }),
+        h('ellipse', { key: 'hair-ends', cx: 50, cy: 70, rx: 26.5, ry: 14.5, fill: HAIR_LIGHT, opacity: 0.9 }),
+        h('g', { key: 'tail', className: 'dsh-wg-tail' },
           h('path', {
-            d: 'M43 4h22a3.4 3.4 0 0 1 3.4 3.4v8.1A3.4 3.4 0 0 1 65 18.9H51.4L47 22.3v-3.4H43a3.4 3.4 0 0 1-3.4-3.4V7.4A3.4 3.4 0 0 1 43 4Z',
-            fill: '#e9f7ff',
-            stroke: '#9fd0ef',
-            strokeWidth: 1.4,
+            d: 'M30 85C23 81 18 74 17 66 23 68 28 73 31 79 35 73 40 68 46 66 45 74 40 81 33 85Z',
+            fill: NAVY,
           }),
-          h('circle', { cx: 48, cy: 11.3, r: 1.5, fill: '#4f9bc9' }),
-          h('circle', { cx: 55, cy: 11.3, r: 1.5, fill: '#4f9bc9' }),
-          h('circle', { cx: 62, cy: 11.3, r: 1.5, fill: '#4f9bc9' }),
-        ))
+        ),
+        // Whale-fin ears, then the face.
+        h('g', { key: 'fin-l', className: 'dsh-wg-fin-l' },
+          h('path', { d: 'M24 48C16 47 8 40 5 32 12 30 20 35 25 43Z', fill: NAVY }),
+          h('path', { d: 'M21 45C16 43 12 39 9 34 14 34 19 37 22 42Z', fill: FIN_INNER }),
+        ),
+        h('g', { key: 'fin-r', className: 'dsh-wg-fin-r' },
+          h('path', { d: 'M76 48C84 47 92 40 95 32 88 30 80 35 75 43Z', fill: NAVY }),
+          h('path', { d: 'M79 45C84 43 88 39 91 34 86 34 81 37 78 42Z', fill: FIN_INNER }),
+        ),
+        h('ellipse', { key: 'face', cx: 50, cy: 46, rx: 20, ry: 18.5, fill: SKIN }),
+        // Side-swept bangs over the forehead.
+        h('path', {
+          key: 'bangs',
+          d: 'M28 45C27 27 36 19 50 19 64 19 73 27 72 45 69 38 65 34 61 36 57 38 54 41 50 39 46 37 43 38 39 36 35 34 31 38 28 45Z',
+          fill: '#3e63c4',
+        }),
+        // White ruffled maid headdress.
+        h('path', {
+          key: 'headband',
+          d: 'M30 35C29 23 38 15 50 15 62 15 71 23 70 35 68 27 60 21 50 21 40 21 32 27 30 35Z',
+          fill: '#ffffff',
+        }),
+        h('g', { key: 'frill' }, [
+          h('circle', { key: 'f1', cx: 35, cy: 28.5, r: 2.1, fill: '#ffffff' }),
+          h('circle', { key: 'f2', cx: 42, cy: 24, r: 2.1, fill: '#ffffff' }),
+          h('circle', { key: 'f3', cx: 50, cy: 22.5, r: 2.1, fill: '#ffffff' }),
+          h('circle', { key: 'f4', cx: 58, cy: 24, r: 2.1, fill: '#ffffff' }),
+          h('circle', { key: 'f5', cx: 65, cy: 28.5, r: 2.1, fill: '#ffffff' }),
+        ]),
+        h('g', { key: 'ahoge', className: 'dsh-wg-ahoge' },
+          h('path', {
+            d: 'M50 18C49 11 53 6 57 6 61 6 63 9 61 12 59 15 55 13 55 10',
+            fill: 'none',
+            stroke: HAIR,
+            strokeWidth: 3,
+            strokeLinecap: 'round',
+          }),
+        ),
+        h('g', { key: 'eyes', className: 'dsh-wg-eye' },
+          eye(40.5, 'eye-l'),
+          eye(59.5, 'eye-r'),
+          h('path', { key: 'lash-l', d: 'M35 42.4C37 40.6 41 40 44.6 41.2', fill: 'none', stroke: LASH, strokeWidth: 1.5, strokeLinecap: 'round' }),
+          h('path', { key: 'lash-r', d: 'M65 42.4C63 40.6 59 40 55.4 41.2', fill: 'none', stroke: LASH, strokeWidth: 1.5, strokeLinecap: 'round' }),
+        ),
+        h('ellipse', { key: 'blush-l', cx: 36, cy: 54.5, rx: 3.2, ry: 1.9, fill: BLUSH, opacity: 0.8 }),
+        h('ellipse', { key: 'blush-r', cx: 64, cy: 54.5, rx: 3.2, ry: 1.9, fill: BLUSH, opacity: 0.8 }),
+        h('path', { key: 'mouth', d: 'M47.5 57.4Q50 60 52.5 57.4', fill: 'none', stroke: '#c4697b', strokeWidth: 1.4, strokeLinecap: 'round' }),
+        // Neck, collar, sleeves, dress, apron and trim.
+        h('rect', { key: 'neck', x: 48, y: 60.5, width: 4, height: 5, rx: 2, fill: SKIN_SHADE }),
+        h('ellipse', { key: 'sleeve-l', cx: 35.5, cy: 70, rx: 3.4, ry: 5, fill: NAVY }),
+        h('ellipse', { key: 'sleeve-r', cx: 64.5, cy: 70, rx: 3.4, ry: 5, fill: NAVY }),
+        h('path', { key: 'bodice', d: 'M41 65C45 63.2 55 63.2 59 65L61 73C54 76 46 76 39 73Z', fill: NAVY }),
+        h('path', { key: 'skirt', d: 'M39 73C46 76 54 76 61 73L67 85C58 89 42 89 33 85Z', fill: NAVY }),
+        h('path', { key: 'hem', d: 'M33 85C42 89 58 89 67 85L68.5 87.2C58 91.4 42 91.4 31.5 87.2Z', fill: '#ffffff' }),
+        h('path', { key: 'collar', d: 'M42 65C44 62.6 46.4 62 50 64.2 53.6 62 56 62.6 58 65 55 67.2 45 67.2 42 65Z', fill: '#ffffff' }),
+        h('path', { key: 'apron', d: 'M44.5 67C46.5 66 53.5 66 55.5 67L57 82C54 84 46 84 43 82Z', fill: '#ffffff' }),
+        h('path', { key: 'trim', d: 'M34.5 84C43 87.6 57 87.6 65.5 84', fill: 'none', stroke: GOLD, strokeWidth: 1, opacity: 0.9 }),
+      ]
+
+      if (kind === 'done') {
+        parts.push(
+          h('circle', { key: 'hand-l', cx: 39, cy: 83.5, r: 2.6, fill: SKIN }),
+          h('circle', { key: 'hand-r', cx: 61, cy: 83.5, r: 2.6, fill: SKIN }),
+          h('path', { key: 'bowl', d: 'M38 82.5C38 92 62 92 62 82.5Z', fill: '#dfeaf4', stroke: '#c9d8e6', strokeWidth: 0.8 }),
+          h('ellipse', { key: 'rice', cx: 50, cy: 81, rx: 9.4, ry: 3.4, fill: '#ffffff' }),
+          h('g', { key: 'grains' }, [
+            h('circle', { key: 'g1', cx: 45.5, cy: 79.8, r: 1.3, fill: '#ffffff' }),
+            h('circle', { key: 'g2', cx: 50, cy: 79, r: 1.4, fill: '#ffffff' }),
+            h('circle', { key: 'g3', cx: 54.5, cy: 80, r: 1.2, fill: '#ffffff' }),
+          ]),
+          h('path', { key: 'steam-1', className: 'dsh-wg-steam', d: 'M44 78C42.6 76.4 45.4 75 44 73.4', fill: 'none', stroke: '#a9d4ee', strokeWidth: 1.6, strokeLinecap: 'round' }),
+          h('path', { key: 'steam-2', className: 'dsh-wg-steam dsh-wg-steam-2', d: 'M50 78C48.6 76.2 51.4 74.8 50 73', fill: 'none', stroke: '#a9d4ee', strokeWidth: 1.6, strokeLinecap: 'round' }),
+        )
+      } else {
+        parts.push(
+          h('rect', { key: 'bubble', className: 'dsh-wg-bubble', x: 70, y: 8, width: 24, height: 17, rx: 5.5, fill: '#eef8ff', stroke: '#9fd0ef', strokeWidth: 1.2 }),
+          h('g', { key: 'dots', className: 'dsh-wg-bubble' }, [
+            h('circle', { key: 'd1', className: 'dsh-wg-dot', cx: 77.5, cy: 16.5, r: 1.7, fill: EYE }),
+            h('circle', { key: 'd2', className: 'dsh-wg-dot dsh-wg-dot-2', cx: 82, cy: 16.5, r: 1.7, fill: EYE }),
+            h('circle', { key: 'd3', className: 'dsh-wg-dot dsh-wg-dot-3', cx: 86.5, cy: 16.5, r: 1.7, fill: EYE }),
+          ]),
+        )
       }
+
       return h('svg', {
         className: 'dsh-whale-art',
-        viewBox: '0 0 72 56',
+        viewBox: '0 0 100 100',
         'aria-hidden': 'true',
         focusable: 'false',
       }, parts)
@@ -261,18 +320,32 @@ window.__ModuleLoader__.load({
       '@keyframes dsh-whale-in{from{opacity:0;transform:translateY(10px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}}',
       '.dsh-whale-open{display:flex;align-items:center;gap:8px;min-width:0;margin:0;padding:0;border:0;border-radius:10px;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}',
       '.dsh-whale-open:focus-visible{outline:2px solid var(--dsw-alias-brand-primary,#4d6bfe);outline-offset:2px}',
-      '.dsh-whale-art{display:block;flex:none;width:58px;height:45px;animation:dsh-whale-bob 2.8s ease-in-out infinite}',
-      '@keyframes dsh-whale-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2.5px)}}',
+      '.dsh-whale-art{display:block;flex:none;width:64px;height:64px;animation:dsh-whale-bob 3.4s ease-in-out infinite}',
+      '@keyframes dsh-whale-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2.4px)}}',
       '.dsh-whale-text{display:flex;flex-direction:column;min-width:0;gap:1px}',
-      '.dsh-whale-title{max-width:214px;overflow:hidden;font-size:13px;font-weight:600;line-height:18px;color:var(--dsw-alias-label-primary,#1c1c1c);text-overflow:ellipsis;white-space:nowrap}',
-      '.dsh-whale-sub{max-width:214px;overflow:hidden;font-size:12px;line-height:17px;color:var(--dsw-alias-label-secondary,#6b6b6b);text-overflow:ellipsis;white-space:nowrap}',
+      '.dsh-whale-title{max-width:196px;overflow:hidden;font-size:13px;font-weight:600;line-height:18px;color:var(--dsw-alias-label-primary,#1c1c1c);text-overflow:ellipsis;white-space:nowrap}',
+      '.dsh-whale-sub{max-width:196px;overflow:hidden;font-size:12px;line-height:17px;color:var(--dsw-alias-label-secondary,#6b6b6b);text-overflow:ellipsis;white-space:nowrap}',
       '.dsh-whale-close{display:grid;flex:none;place-items:center;width:24px;height:24px;margin-left:4px;padding:0;border:0;border-radius:999px;background:transparent;color:var(--dsw-alias-label-secondary,#6b6b6b);font:inherit;font-size:15px;line-height:1;cursor:pointer}',
       '.dsh-whale-close:hover{background:var(--dsw-alias-bg-layer-2,rgba(0,0,0,.06))}',
       '.dsh-whale-close:focus-visible{outline:2px solid var(--dsw-alias-brand-primary,#4d6bfe);outline-offset:1px}',
-      '.dsh-whale-snack{transform-origin:62px 34px;animation:dsh-whale-snack .52s .08s cubic-bezier(.2,.9,.3,1.2) both}',
-      '@keyframes dsh-whale-snack{0%{opacity:0;transform:translate(7px,7px) scale(.6)}55%{opacity:1}100%{opacity:1;transform:translate(0,0) scale(1)}}',
-      '.dsh-whale-bubble{transform-origin:54px 18px;animation:dsh-whale-pop .38s .06s cubic-bezier(.2,.9,.3,1.2) both}',
-      '@keyframes dsh-whale-pop{0%{opacity:0;transform:scale(.6)}100%{opacity:1;transform:scale(1)}}',
+      '.dsh-wg-ahoge{transform-box:view-box;transform-origin:52px 16px;animation:dsh-wg-ahoge 2.8s ease-in-out infinite}',
+      '@keyframes dsh-wg-ahoge{0%,100%{transform:rotate(-5deg)}50%{transform:rotate(7deg)}}',
+      '.dsh-wg-fin-l{transform-box:view-box;transform-origin:24px 44px;animation:dsh-wg-fin 3.8s ease-in-out infinite}',
+      '.dsh-wg-fin-r{transform-box:view-box;transform-origin:76px 44px;animation:dsh-wg-fin 3.8s ease-in-out infinite reverse}',
+      '@keyframes dsh-wg-fin{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(5deg)}}',
+      '.dsh-wg-tail{transform-box:view-box;transform-origin:34px 84px;animation:dsh-wg-tail 3.2s ease-in-out infinite}',
+      '@keyframes dsh-wg-tail{0%,100%{transform:rotate(-5deg)}50%{transform:rotate(7deg)}}',
+      '.dsh-wg-eye{transform-box:view-box;transform-origin:50px 48px;animation:dsh-wg-blink 4.6s infinite}',
+      '@keyframes dsh-wg-blink{0%,90%,100%{transform:scaleY(1)}93%{transform:scaleY(.08)}96%{transform:scaleY(1)}}',
+      '.dsh-wg-bubble{animation:dsh-wg-pop .34s cubic-bezier(.2,.9,.3,1.2) both}',
+      '@keyframes dsh-wg-pop{0%{opacity:0;transform:translateY(4px) scale(.7)}100%{opacity:1;transform:none}}',
+      '.dsh-wg-dot{animation:dsh-wg-dot 1.5s ease-in-out infinite}',
+      '.dsh-wg-dot-2{animation-delay:.2s}',
+      '.dsh-wg-dot-3{animation-delay:.4s}',
+      '@keyframes dsh-wg-dot{0%,60%,100%{opacity:.35}25%{opacity:1}}',
+      '.dsh-wg-steam{opacity:0;animation:dsh-wg-steam 2.6s ease-in-out infinite}',
+      '.dsh-wg-steam-2{animation-delay:.7s}',
+      '@keyframes dsh-wg-steam{0%{opacity:0;transform:translateY(3px)}35%{opacity:.9}100%{opacity:0;transform:translateY(-7px)}}',
       '.dsh-whale-row{display:flex;align-items:center;gap:12px;padding:16px 0;border-bottom:0.5px solid var(--dsw-alias-border-l2,rgba(0,0,0,.12))}',
       '.dsh-whale-rowText{display:flex;flex:1;flex-direction:column;min-width:0;gap:4px;padding-right:16px}',
       '.dsh-whale-rowTitle{font-size:14px;font-weight:400;line-height:22px;color:var(--dsw-alias-label-primary,#1c1c1c)}',
@@ -289,7 +362,7 @@ window.__ModuleLoader__.load({
       '.dsh-whale-knob{position:absolute;top:2px;left:2px;display:block;width:14px;height:14px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .18s ease}',
       ".dsh-whale-switch[aria-checked='true'] .dsh-whale-knob{transform:translateX(12px)}",
       '@media (max-width:520px){.dsh-whale-row{flex-wrap:wrap}.dsh-whale-switches{width:100%;justify-content:flex-end}}',
-      '@media (prefers-reduced-motion:reduce){.dsh-whale-card,.dsh-whale-art,.dsh-whale-snack,.dsh-whale-bubble,.dsh-whale-knob,.dsh-whale-track{animation:none!important;transition:none!important}}',
+      '@media (prefers-reduced-motion:reduce){.dsh-whale-card,.dsh-whale-art,.dsh-wg-ahoge,.dsh-wg-fin-l,.dsh-wg-fin-r,.dsh-wg-tail,.dsh-wg-eye,.dsh-wg-bubble,.dsh-wg-dot,.dsh-wg-steam,.dsh-whale-knob,.dsh-whale-track{animation:none!important;transition:none!important}}',
     ].join('\n')
 
     return {
@@ -626,7 +699,7 @@ window.__ModuleLoader__.load({
               title: t('open'),
               onClick: () => { openItem(item) },
             },
-              whaleArt(kind),
+              whaleGirl(kind),
               h('span', { className: 'dsh-whale-text' },
                 h('span', { className: 'dsh-whale-title' }, title),
                 h('span', { className: 'dsh-whale-sub' }, sub),
