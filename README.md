@@ -13,7 +13,7 @@
 | 目录 | 说明 |
 | --- | --- |
 | [`apps/`](apps/README.md) | 独立 Windows 桌面工具（科技脉冲、桌面小组件、电脑管家、Codex 环境搬运、RAW 转 JPG、DSH 插件脉冲面板、Lumen 译、汉化工具） |
-| [`plugins/`](plugins/README.md) | DeepSeek Harness 宿主插件（DeepSeek Hub、Media Studio、Query Bridge、Codex History Bridge） |
+| [`plugins/`](plugins/README.md) | DeepSeek Harness 宿主插件（DeepSeek Hub、Media Studio、Query Bridge、Codex History Bridge、鲸鱼提示） |
 | [`extras/`](extras/README.md) | 单独发布的生成器与脚本（高中政治思维导图） |
 | [`projects/`](projects/README.md) | 各个 DIY 项目的资料（齐柏林飞艇、外骨骼、台历、航模方向） |
 | [`tools/`](tools/README.md) | 配套工具：DeepSeek 记录同步、Git 同步、隐私检查、Markdown 转换 |

@@ -10,6 +10,7 @@
 | `media-studio/` | `@local/media-studio` | 让 Agent 直接驱动本机的 FilmCraft / EffectCraft / PhotoCraft / LightCraft |
 | `query-bridge/` | `@local/query-bridge` | 查询 GitHub 仓库状态、DeepSeek 账户余额、工作区历史会话 |
 | `codex-history-bridge/` | `@local/codex-history-bridge` | 把本机 Codex 历史导入工作区（Markdown + 索引 + 可选原始 JSONL） |
+| `whale-notify/` | `@local/whale-notify` | 任务完成或有待你回复的问题时，播放提示音并弹出鲸鱼卡片 |
 
 ## 安装
 

@@ -1,0 +1,3 @@
+- insert:
+    - id: whale-notify
+      name: '@local/whale-notify'
