@@ -18,27 +18,29 @@ something.
 
 ## The character
 
-Blue gradient hair, the loop cowlick, whale-fin ears, the white ruffled maid
-headdress and apron, the navy dress and the big whale tail — the card draws the
-community **鲸鱼娘 / 蓝色大肥鱼**, DeepSeek's fan-made personification.
+The card shows the community **鲸鱼娘 / 蓝色大肥鱼**, DeepSeek's fan-made
+personification: blue gradient hair, loop cowlick, whale-fin ears, white ruffled
+maid headdress and apron, navy dress, big whale tail. Two states are used — the
+finished-turn card shows her **happy, arms up**, and the waiting-for-you card shows
+her **holding a "?" sign**.
 
-The design traits are documented by the community spec
-[deepseek-whalechan](https://github.com/Neko3000/deepseek-whalechan); the character
-itself traces back to Bilibili creators
+The artwork is **metsh's render** of that character from the open-source asset pack
+[`dsh-task-mascot`](https://www.npmjs.com/package/dsh-task-mascot)
+(`assets/packs/dafeiyu`), released under **CC BY-NC-SA 4.0**. This plugin only
+crops, downscales (256 → 192 px) and re-encodes the frames to WebP, then embeds them
+as data URIs so the card needs no extra request: no retouching, no recolouring.
+
+The character traces back to Bilibili creators
 [上善无形](https://space.bilibili.com/4456176) (the original character 溟月) and
-[ZipZipPipe](https://space.bilibili.com/4168597) (who merged in the whale and maid
-elements).
+[ZipZipPipe](https://space.bilibili.com/4168597) (whale elements plus the maid
+outfit). Full attribution, the share-alike term and the non-commercial limit are in
+[ART_LICENSE.md](ART_LICENSE.md): the artwork is CC BY-NC-SA 4.0, the code stays
+MIT. It is an unofficial fan work — no affiliation with or endorsement from
+DeepSeek.
 
-The drawing here is an **original flat-vector chibi** built from those traits:
-plain SVG paths inside `client.js`, no fan artwork copied, traced, or bundled.
-It is an unofficial fan work with no affiliation or endorsement from DeepSeek.
-The character chain is released under CC BY-NC-SA 4.0, and this rendering follows
-it; see [ART_LICENSE.md](ART_LICENSE.md) for the exact attribution line, the code
-license (MIT), and the non-commercial term.
+Motion stays at the image level: a slow bob-with-breath every 3.6 s, plus the card's
+slide-in. `prefers-reduced-motion` turns both off.
 
-Animation is CSS-only on the SVG groups: idle bob, cowlick sway, fin flap, tail
-wag, a blink every ~4.6 s, rising steam, and pulsing bubble dots. `prefers-reduced-motion`
-turns all of it off.
 
 
 ## Use it
