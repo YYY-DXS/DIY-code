@@ -128,12 +128,21 @@ function renderTranscript(conv, msgs) {
   return lines.join('\n').replace(/\n{3,}/g, '\n\n').trimEnd() + '\n'
 }
 
+function escapeMarkdownCell(value) {
+  return String(value ?? '')
+    .replace(/\\/g, '\\\\')
+    .replace(/\[/g, '\\[')
+    .replace(/\]/g, '\\]')
+    .replace(/\|/g, '\\|')
+    .replace(/\r?\n/g, ' ');
+}
+
 function renderIndex(manifest) {
   const rows = Object.values(manifest.conversations || {})
     .sort((a, b) => (b.updated || 0) - (a.updated || 0))
     .map(
       (c) =>
-        `| ${fmtTs(c.updated).slice(0, 10)} | [${(c.title || '未命名').replace(/\|/g, '\\|')}](transcripts/${encodeURI(c.file)}) | ${c.messages} | ${c.pinned ? '📌' : ''} |`
+        `| ${fmtTs(c.updated).slice(0, 10)} | [${escapeMarkdownCell(c.title || '未命名')}](transcripts/${encodeURIComponent(c.file)}) | ${c.messages} | ${c.pinned ? '📌' : ''} |`
     )
   return [
     '# DeepSeek 会话索引（自动同步）',

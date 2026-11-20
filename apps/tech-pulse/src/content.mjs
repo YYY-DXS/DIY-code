@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { mkdir, readFile, rename, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { decodeEntities, stripHtml } from "./collectors.mjs";
+import { decodeEntities, stripElementBlocks, stripHtml } from "./collectors.mjs";
 
 const PAGE_LIMIT = 1_800_000;
 const IMAGE_LIMIT = 6_000_000;
@@ -55,10 +55,16 @@ export function extractWebPageContent(html, pageUrl) {
     html.match(/<article\b[^>]*>([\s\S]*?)<\/article>/i)?.[1] ||
     html.match(/<main\b[^>]*>([\s\S]*?)<\/main>/i)?.[1] ||
     html;
-  const cleaned = article
-    .replace(/<script\b[\s\S]*?<\/script>/gi, " ")
-    .replace(/<style\b[\s\S]*?<\/style>/gi, " ")
-    .replace(/<(nav|footer|header|aside|form|noscript)\b[\s\S]*?<\/\1>/gi, " ");
+  const cleaned = stripElementBlocks(article, [
+    "script",
+    "style",
+    "nav",
+    "footer",
+    "header",
+    "aside",
+    "form",
+    "noscript"
+  ]);
   const paragraphs = [...cleaned.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p>/gi)]
     .map((match) => stripHtml(match[1]))
     .filter((text) => text.length >= 35)

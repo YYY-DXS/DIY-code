@@ -37,12 +37,136 @@ const DIY_HINTS = [
   "机器人制作"
 ];
 
+const VOID_TAGS = new Set([
+  "area", "base", "br", "col", "embed", "hr", "img", "input",
+  "link", "meta", "param", "source", "track", "wbr"
+]);
+
+function findTagEnd(html, start) {
+  let quote = "";
+  for (let i = start + 1; i < html.length; i += 1) {
+    const ch = html[i];
+    if (quote) {
+      if (ch === quote) quote = "";
+      continue;
+    }
+    if (ch === '"' || ch === "'") {
+      quote = ch;
+      continue;
+    }
+    if (ch === ">") return i;
+  }
+  return -1;
+}
+
+function parseTag(html, start) {
+  const end = findTagEnd(html, start);
+  if (end === -1) return null;
+  let i = start + 1;
+  let closing = false;
+  if (html[i] === "/") {
+    closing = true;
+    i += 1;
+  }
+  while (i < end && /\s/.test(html[i])) i += 1;
+  let name = "";
+  while (i < end && /[a-zA-Z0-9:-]/.test(html[i])) {
+    name += html[i];
+    i += 1;
+  }
+  if (!name) return null;
+  const raw = html.slice(start, end + 1);
+  return {
+    name: name.toLowerCase(),
+    closing,
+    selfClosing: raw.trimEnd().endsWith("/>") || VOID_TAGS.has(name.toLowerCase()),
+    end
+  };
+}
+
+/**
+ * 删除指定元素的整个块（含内容），用标签扫描而不是正则。
+ * 返回移除后的 HTML 字符串；遇到没有闭合的块会删到末尾。
+ */
+export function stripElementBlocks(value, names) {
+  const target = new Set(names.map((name) => String(name).toLowerCase()));
+  const html = String(value ?? "");
+  let output = "";
+  let i = 0;
+  while (i < html.length) {
+    const lt = html.indexOf("<", i);
+    if (lt === -1) {
+      output += html.slice(i);
+      break;
+    }
+    output += html.slice(i, lt);
+    const tag = parseTag(html, lt);
+    if (!tag) {
+      output += "<";
+      i = lt + 1;
+      continue;
+    }
+    if (tag.closing || tag.selfClosing || !target.has(tag.name)) {
+      output += html.slice(lt, tag.end + 1);
+      i = tag.end + 1;
+      continue;
+    }
+    let depth = 1;
+    let j = tag.end + 1;
+    while (j < html.length) {
+      const next = html.indexOf("<", j);
+      if (next === -1) {
+        j = html.length;
+        break;
+      }
+      const inner = parseTag(html, next);
+      if (!inner) {
+        j = next + 1;
+        continue;
+      }
+      if (!inner.closing && !inner.selfClosing && inner.name === tag.name) {
+        depth += 1;
+      } else if (inner.closing && inner.name === tag.name) {
+        depth -= 1;
+        if (depth === 0) {
+          j = inner.end + 1;
+          break;
+        }
+      }
+      j = inner.end + 1;
+    }
+    output += " ";
+    i = j;
+  }
+  return output;
+}
+
+function stripTags(value) {
+  const html = String(value ?? "");
+  let output = "";
+  let i = 0;
+  while (i < html.length) {
+    const lt = html.indexOf("<", i);
+    if (lt === -1) {
+      output += html.slice(i);
+      break;
+    }
+    output += html.slice(i, lt);
+    const tag = parseTag(html, lt);
+    if (!tag) {
+      output += "<";
+      i = lt + 1;
+      continue;
+    }
+    output += " ";
+    i = tag.end + 1;
+  }
+  return output;
+}
+
 export function stripHtml(value = "") {
   return decodeEntities(
-    String(value)
-      .replace(/<script[\s\S]*?<\/script>/gi, " ")
-      .replace(/<style[\s\S]*?<\/style>/gi, " ")
-      .replace(/<[^>]+>/g, " ")
+    stripTags(stripElementBlocks(value, ["script", "style"]))
       .replace(/\s+/g, " ")
       .trim()
   );

@@ -189,7 +189,6 @@ def cmd_deepseek(args) -> dict:
             "error": f"余额查询失败（HTTP {code}）：{message}",
             "hint": "401 表示 key 无效或已被撤销。" if code == 401 else "",
             "keySource": source,
-            "keyMasked": f"{key[:6]}…{key[-4:]}",
         }
 
     mcode, models = http_json(f"{DS_BASE}/models", headers)
@@ -198,7 +197,6 @@ def cmd_deepseek(args) -> dict:
     return {
         "ok": True,
         "keySource": source,
-        "keyMasked": f"{key[:6]}…{key[-4:]}",
         "available": balance.get("is_available"),
         "balances": [
             {
