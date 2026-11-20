@@ -17,30 +17,84 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: '3.12'
 
       - name: Install PyInstaller
         shell: pwsh
-        run: python -m pip install --upgrade pip pyinstaller
+        run: |
+          python --version
+          python -m pip install --upgrade pip pyinstaller
+          python -c "import PyInstaller; print('PyInstaller', PyInstaller.__version__)"
 
-      - name: Build binaries
+      # 预检：把「脚本语法错误 / 文件缺失 / 环境差异」和「编译失败」分开，失败时一眼能看出是哪类
+      - name: Preflight
         shell: pwsh
-        run: ./tools/build/build-binaries.ps1 -PythonExe python
+        run: |
+          "pwsh $($PSVersionTable.PSVersion)"
+          python --version
+          Get-ChildItem tools/build | Format-Table Name, Length -AutoSize | Out-String | Write-Host
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            (Join-Path $PWD 'tools/build/build-binaries.ps1'), [ref]$tokens, [ref]$errors) | Out-Null
+          if ($errors.Count -gt 0) {
+            $errors | ForEach-Object {
+              Write-Host "::error title=脚本语法错误::$($_.Message)（第 $($_.Extent.StartLineNumber) 行）"
+            }
+            throw "构建脚本有语法错误，详见上方 annotation"
+          }
+          "parse ok"
+
+      - name: Build DeepSeekHubPanel.exe
+        shell: pwsh
+        run: |
+          try { ./tools/build/build-binaries.ps1 -Only launcher }
+          catch {
+            Write-Host "::error title=launcher 构建失败::$($_.Exception.Message)"
+            throw
+          }
+
+      - name: Build RAW转JPG.exe
+        shell: pwsh
+        run: |
+          try { ./tools/build/build-binaries.ps1 -Only raw }
+          catch {
+            Write-Host "::error title=RAW转JPG 构建失败::$($_.Exception.Message)"
+            throw
+          }
+
+      - name: Build DSH-Plugin-Pulse
+        shell: pwsh
+        run: |
+          try { ./tools/build/build-binaries.ps1 -Only pulse -PythonExe python }
+          catch {
+            Write-Host "::error title=DSH-Plugin-Pulse 构建失败::$($_.Exception.Message)"
+            throw
+          }
+
+      - name: Checksums
+        shell: pwsh
+        run: |
+          try { ./tools/build/build-binaries.ps1 -Only checksum }
+          catch {
+            Write-Host "::error title=产物校验失败::$($_.Exception.Message)"
+            throw
+          }
 
       - name: Show checksums
         shell: pwsh
         run: |
           Get-Content dist-bin/SHA256SUMS.txt
-          "# Build binaries ($($env:GITHUB_REF_NAME))`n" | Add-Content $env:GITHUB_STEP_SUMMARY
+          "## Build binaries ($($env:GITHUB_REF_NAME))" | Add-Content $env:GITHUB_STEP_SUMMARY
           Get-Content dist-bin/SHA256SUMS.txt | ForEach-Object { "- ``$_``" } | Add-Content $env:GITHUB_STEP_SUMMARY
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: binaries-${{ github.ref_name }}
           path: dist-bin/
