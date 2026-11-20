@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 💬 使用讨论 / 提问
+    url: https://github.com/YYY-DXS/DIY-code/discussions
+    about: 用法、配置、想法交流请走 Discussions
+  - name: 📖 使用说明
+    url: https://github.com/YYY-DXS/DIY-code#readme
+    about: 下载、目录结构、同步方式

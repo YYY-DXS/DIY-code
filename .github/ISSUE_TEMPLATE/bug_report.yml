@@ -1,0 +1,85 @@
+name: 🐞 问题反馈
+description: 软件报错、闪退、行为不符合预期
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈。请先确认：① 用的是[最新发行版](https://github.com/YYY-DXS/DIY-code/releases)；② 已搜索过现有 issue。
+
+  - type: dropdown
+    id: product
+    attributes:
+      label: 哪个软件 / 插件
+      options:
+        - pc-toolkit
+        - desktop-widget
+        - tech-pulse
+        - codex-portable
+        - raw-to-jpg
+        - lumen-translate
+        - hanhua-kit
+        - dsh-plugin-pulse
+        - updater
+        - deepseek-hub（插件）
+        - media-studio（插件）
+        - query-bridge（插件）
+        - codex-history-bridge（插件）
+        - 其他 / 不确定
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: 版本
+      placeholder: 例如 v2.0.8
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: Windows 版本
+      placeholder: 例如 Windows 11 23H2 / Windows 10 22H2
+    validations:
+      required: true
+
+  - type: textarea
+    id: what
+    attributes:
+      label: 发生了什么
+      description: 现象描述 + 报错原文（可直接粘贴）
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      placeholder: |
+        1. 解压到 D:\tools
+        2. 双击 ...
+        3. 点击 ...
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 你期望的结果
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志 / 截图
+      description: 图片可直接拖进输入框；日志文件在程序同目录
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 自查
+      options:
+        - label: 我使用的是最新版本
+          required: true
+        - label: 我搜索过现有 issue，没有重复
+          required: true
