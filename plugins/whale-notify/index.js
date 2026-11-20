@@ -6,7 +6,7 @@
  * own dragging, voice playback and the optional shutdown countdown.
  */
 import { spawn } from 'node:child_process'
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { appendFileSync, mkdirSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -16,6 +16,8 @@ const HERE = dirname(fileURLToPath(import.meta.url))
 /** Where the widget picks up state and keeps its own window position. */
 const STATE_DIR = join(tmpdir(), 'dsh-whale-pet')
 const STATE_PATH = join(STATE_DIR, 'state.json')
+/** Diagnostics for the spawn attempt; the widget keeps its own log beside this. */
+const HOST_LOG = join(STATE_DIR, 'host.log')
 /** How long a finished run keeps celebrating before the widget reads idle. */
 const RESET_MS = 9000
 
@@ -28,6 +30,15 @@ export function apply(ctx) {
   let resetTimer = null
   let child = null
   let stopped = false
+
+  const hostLog = (message) => {
+    try {
+      mkdirSync(STATE_DIR, { recursive: true })
+      appendFileSync(HOST_LOG, `[${new Date().toISOString()}] ${message}\n`, 'utf8')
+    } catch (error) {
+      // Diagnostics must never break activation.
+    }
+  }
 
   const writeState = () => {
     try {
@@ -62,13 +73,20 @@ export function apply(ctx) {
   const script = join(HERE, 'widget', 'widget.ps1')
   const assets = join(HERE, 'assets')
   const shell = join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe')
+  hostLog(`spawn ${shell} -File ${script}`)
   try {
     child = spawn(shell, [
       '-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', script,
       '-StatePath', STATE_PATH, '-AssetsDir', assets,
     ], { windowsHide: true, stdio: 'ignore', detached: false })
-    child.on('error', (error) => { console.error('[whale-pet] the desktop widget failed to start', error) })
-    child.on('exit', () => { child = null })
+    child.on('error', (error) => {
+      hostLog(`spawn error: ${error && error.message ? error.message : String(error)}`)
+      console.error('[whale-pet] the desktop widget failed to start', error)
+    })
+    child.on('exit', (code, signal) => {
+      hostLog(`widget exited code=${code} signal=${signal}`)
+      child = null
+    })
   } catch (error) {
     console.error('[whale-pet] cannot spawn the desktop widget', error)
   }

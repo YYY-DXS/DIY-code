@@ -19,6 +19,12 @@ $ErrorActionPreference = 'Stop'
 $scriptDir = Split-Path -Parent $StatePath
 if (-not (Test-Path $scriptDir)) { New-Item -ItemType Directory -Force -Path $scriptDir | Out-Null }
 $configPath = Join-Path $scriptDir 'widget.json'
+$logPath = Join-Path $scriptDir 'widget.log'
+function Log([string]$message) {
+  try { Add-Content -LiteralPath $logPath -Value ("[{0:yyyy-MM-dd HH:mm:ss}] {1}" -f (Get-Date), $message) -Encoding UTF8 } catch { }
+}
+trap { Log ('TRAP: ' + $_.Exception.ToString()); exit 1 }
+Log "start (mutex owned) state=$StatePath assets=$AssetsDir"
 
 $script:phase = ''
 $script:armed = $false
@@ -226,13 +232,22 @@ function Poll-State {
 # 位置：优先上次的位置，否则右下角
 $config = Read-Config
 $area = [System.Windows.SystemParameters]::WorkArea
+$defaultLeft = $area.Right - 240
+$defaultTop = $area.Bottom - 320
+$window.Left = $defaultLeft
+$window.Top = $defaultTop
 if ($config -ne $null -and $config.left -ne $null -and $config.top -ne $null) {
-  $window.Left = [double]$config.left
-  $window.Top = [double]$config.top
-} else {
-  $window.Left = $area.Right - 240
-  $window.Top = $area.Bottom - 320
+  $candidateLeft = [double]$config.left
+  $candidateTop = [double]$config.top
+  # 保存的位置可能来自不同缩放比例或已拔掉的显示器；超出工作区就回默认角
+  if ($candidateLeft -ge $area.Left -and $candidateLeft -le ($area.Right - 120) -and $candidateTop -ge $area.Top -and $candidateTop -le ($area.Bottom - 80)) {
+    $window.Left = $candidateLeft
+    $window.Top = $candidateTop
+  } else {
+    Log "saved position $candidateLeft,$candidateTop outside work area $($area.Width)x$($area.Height); using the default corner"
+  }
 }
+Log ("work area {0},{1} {2}x{3}; window at {4},{5}" -f $area.Left, $area.Top, $area.Width, $area.Height, $window.Left, $window.Top)
 # 武装状态不跨进程恢复：每次启动都从“未武装”开始，避免几天前武装的实例误触发关机
 Update-ArmButton
 
@@ -273,4 +288,6 @@ $window.Add_Closed({
   try { $mutex.ReleaseMutex() } catch { }
 })
 
+Log 'showing'
 $window.ShowDialog() | Out-Null
+Log 'closed'
