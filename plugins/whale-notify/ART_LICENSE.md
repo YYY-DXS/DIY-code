@@ -28,6 +28,15 @@
   CC BY-NC-SA 4.0（署名—非商业性使用—相同方式共享）。
 - **其余代码**（Host 半、通知逻辑、提示音合成、读取会话状态的部分）：MIT。
 
+## 桌宠挂件素材（`assets/`）
+
+- **立绘 PNG** `assets/anim/*.png` 与卡片里的 WebP 同源（metsh 渲染，CC BY-NC-SA 4.0），
+  只做了等比缩放，没有改画。
+- **语音** `assets/voice/*.mp3` 取自开源桌宠
+  [dsh-whale-pet](https://github.com/aceice01/dsh-whale-pet) 的 `lib/audio.json`（49 条中选用 10 条）。
+  该项目为**非商业许可**：允许个人使用与非商业再分发（须保留署名）；语音由该项目的 TTS 服务生成，
+  版权归原权利人。**不得商用。**
+
 ## 声明
 
 非官方同人作品，与 DeepSeek（深度求索）无隶属、合作或背书关系。

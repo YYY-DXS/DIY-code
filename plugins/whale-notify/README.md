@@ -60,6 +60,29 @@ persist in this browser (`localStorage`) and apply immediately.
 the finished-turn card with its chime, the next click shows the waiting-for-you
 card, and so on. It ignores the two switches on purpose, so the test always plays.
 
+## Desktop widget (Windows)
+
+`index.js` also spawns a separate **PowerShell + WPF** process: a borderless,
+transparent, always-on-top window with the whale girl at the bottom-right corner
+of the desktop. It reads `%TEMP%\dsh-whale-pet\state.json`, which the Host
+rewrites on every transition, so the pose, the chip and the voice line follow the
+run without touching DSH itself.
+
+- **Drag** her anywhere; the position is remembered in `widget.json` next to the
+  state file. The **×** closes her for this DSH session.
+- **关** (power) arms the shutdown: with it lit, the next finished run shows a
+  **60 秒后关机 · 点我取消** countdown and then schedules the OS shutdown
+  (`shutdown /s /t 15`). Click the countdown to cancel. Armed state persists;
+  it is **off by default** and disarms itself after firing.
+- Voice: ten pre-synthesised lines (see `assets/voice`) — one short line per state
+  change, plus a random line every ten minutes while idle or running.
+- The Host half starts this process when the plugin activates, so a freshly
+  installed or edited bundle needs **one DSH restart** to take over spawning.
+  Disabling the plugin closes the window and cancels a pending shutdown.
+
+The script requires Windows PowerShell (present on every Windows install) and
+desktop WPF; no extra dependency, no DSH patching.
+
 ## How it knows
 
 The Web client already keeps one status snapshot per Session for the sidebar:
