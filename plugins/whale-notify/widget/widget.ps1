@@ -233,7 +233,7 @@ if ($config -ne $null -and $config.left -ne $null -and $config.top -ne $null) {
   $window.Left = $area.Right - 240
   $window.Top = $area.Bottom - 320
 }
-if ($config -ne $null -and $config.armed -eq $true) { $script:armed = $true }
+# 武装状态不跨进程恢复：每次启动都从“未武装”开始，避免几天前武装的实例误触发关机
 Update-ArmButton
 
 $still.Add_MouseLeftButtonDown({ try { $window.DragMove() } catch { } })
