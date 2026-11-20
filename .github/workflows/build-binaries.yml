@@ -1,0 +1,47 @@
+name: Build binaries
+
+# 代码签名（SignPath）要求：产物必须由 CI 从源码可验证地构建，并带产品名/版本元数据。
+# 本 workflow 只负责「构建 + 上传 artifact」，不参与发布流程，不会影响现有的 release。
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install PyInstaller
+        shell: pwsh
+        run: python -m pip install --upgrade pip pyinstaller
+
+      - name: Build binaries
+        shell: pwsh
+        run: ./tools/build/build-binaries.ps1 -PythonExe python
+
+      - name: Show checksums
+        shell: pwsh
+        run: |
+          Get-Content dist-bin/SHA256SUMS.txt
+          "# Build binaries ($($env:GITHUB_REF_NAME))`n" | Add-Content $env:GITHUB_STEP_SUMMARY
+          Get-Content dist-bin/SHA256SUMS.txt | ForEach-Object { "- ``$_``" } | Add-Content $env:GITHUB_STEP_SUMMARY
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: binaries-${{ github.ref_name }}
+          path: dist-bin/
+          if-no-files-found: error

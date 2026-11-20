@@ -36,7 +36,11 @@ apps/TechPulse/
 
 # 构建产物：PyInstaller 的 build/dist、打包出来的 release 目录
 dist/
-build/
-*.spec
+dist-bin/
+apps/*/build/
+plugins/*/build/
 apps/*/release/
 plugins/*/release/
+# 构建时生成的临时元数据文件
+launcher-info.cs
+win-version.txt
