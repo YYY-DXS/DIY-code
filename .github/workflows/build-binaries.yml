@@ -59,7 +59,7 @@ jobs:
         run: |
           try { ./tools/build/build-binaries.ps1 -Only launcher }
           catch {
-            Write-Host "::error title=launcher 构建失败::$($_.Exception.Message)"
+            Write-Host "::error title=launcher 构建失败::$(($_.Exception.Message -replace "`r?`n", " | "))"
             throw
           }
 
@@ -68,7 +68,7 @@ jobs:
         run: |
           try { ./tools/build/build-binaries.ps1 -Only raw }
           catch {
-            Write-Host "::error title=RAW转JPG 构建失败::$($_.Exception.Message)"
+            Write-Host "::error title=RAW转JPG 构建失败::$(($_.Exception.Message -replace "`r?`n", " | "))"
             throw
           }
 
@@ -77,7 +77,7 @@ jobs:
         run: |
           try { ./tools/build/build-binaries.ps1 -Only pulse -PythonExe python }
           catch {
-            Write-Host "::error title=DSH-Plugin-Pulse 构建失败::$($_.Exception.Message)"
+            Write-Host "::error title=DSH-Plugin-Pulse 构建失败::$(($_.Exception.Message -replace "`r?`n", " | "))"
             throw
           }
 
@@ -86,7 +86,7 @@ jobs:
         run: |
           try { ./tools/build/build-binaries.ps1 -Only checksum }
           catch {
-            Write-Host "::error title=产物校验失败::$($_.Exception.Message)"
+            Write-Host "::error title=产物校验失败::$(($_.Exception.Message -replace "`r?`n", " | "))"
             throw
           }
 

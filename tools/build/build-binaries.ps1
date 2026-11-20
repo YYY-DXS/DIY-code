@@ -1,4 +1,4 @@
-# 从源码构建 Windows 可执行文件，产出带产品名/版本元数据的二进制到 dist-bin/
+﻿# 从源码构建 Windows 可执行文件，产出带产品名/版本元数据的二进制到 dist-bin/
 # 目的：代码签名（SignPath）要求「产物必须能从源码可验证地构建」，本地和 CI 用同一套脚本。
 # 用法：
 #   ./build-binaries.ps1                       # 全部构建 + 校验 + 生成哈希
@@ -48,12 +48,25 @@ function Build-Launcher {
         & (Join-Path $PSScriptRoot 'make-assembly-info.ps1') `
             -OutFile $info -ProductName "DeepSeek Hub Panel" -Title "DeepSeek Hub 面板" `
             -Description "DeepSeek 网页会话同步面板启动器" -Version $Version
-        & $csc /nologo /target:winexe /optimize+ `
-            "/out:`"$out\DeepSeekHubPanel.exe`"" `
-            "/win32icon:`"$repo\plugins\deepseek-hub\desktop\app.ico`"" `
-            "`"$repo\plugins\deepseek-hub\desktop\Launcher.cs`"" `
-            "`"$info`""
-        if ($LASTEXITCODE -ne 0) { throw "DeepSeekHubPanel.exe 编译失败（csc 退出码 $LASTEXITCODE）" }
+        $src = Join-Path $repo 'plugins\deepseek-hub\desktop\Launcher.cs'
+        $ico = Join-Path $repo 'plugins\deepseek-hub\desktop\app.ico'
+        foreach ($p in @($src, $ico, $info)) {
+            if (-not (Test-Path $p)) { throw "编译输入不存在：$p" }
+        }
+        # 用参数数组而不是在参数里内嵌引号：PowerShell 7 的原生参数传递规则与 5.1 不同，
+        # 内嵌引号会被转义成 \" 传给 csc，导致参数解析失败。数组由 PowerShell 统一处理引号。
+        $cscArgs = @(
+            '/nologo', '/target:winexe', '/optimize+',
+            "/out:$out\DeepSeekHubPanel.exe",
+            "/win32icon:$ico",
+            $src,
+            $info
+        )
+        $cscLog = (& $csc @cscArgs 2>&1 | Out-String)
+        Write-Host $cscLog
+        if ($LASTEXITCODE -ne 0) {
+            throw ("DeepSeekHubPanel.exe 编译失败（csc 退出码 " + $LASTEXITCODE + "）：" + ($cscLog -replace "`r?`n", " | "))
+        }
     } finally {
         Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue
     }
