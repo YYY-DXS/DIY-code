@@ -70,10 +70,15 @@ run without touching DSH itself.
 
 - **Drag** her anywhere; the position is remembered in `widget.json` next to the
   state file. The **×** closes her for this DSH session.
-- **关** (power) arms the shutdown: with it lit, the next finished run shows a
-  **60 秒后关机 · 点我取消** countdown and then schedules the OS shutdown
-  (`shutdown /s /t 15`). Click the countdown to cancel. Armed state persists;
-  it is **off by default** and disarms itself after firing.
+- **Tray icon**: left-click toggles the window, right-click opens the menu -
+  status, show/hide, **完成后关机** (arms the shutdown), **取消关机倒计时**, 退出.
+  Arming is off on every start; after firing it disarms itself.
+- **Shutdown**: while armed, the next finished run shows **60 秒后关机 · 点我取消**
+  and then schedules `shutdown /s /t 15`; click the countdown to cancel.
+- **State source**: the Host rewrites `state.json` on every transition and keeps
+  a 15 s heartbeat. If the heartbeat stops for 75 s (DSH closed or the plugin
+  disabled) the chip turns **离线** instead of freezing on the last pose.
+  Refreshing the web page does not affect this window: it follows that file.
 - Voice: ten pre-synthesised lines (see `assets/voice`) — one short line per state
   change, plus a random line every ten minutes while idle or running.
 - The Host half starts this process when the plugin activates, so a freshly

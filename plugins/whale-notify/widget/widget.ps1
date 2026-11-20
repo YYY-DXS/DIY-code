@@ -3,12 +3,14 @@
   [Parameter(Mandatory = $true)][string]$AssetsDir
 )
 
-# 鲸鱼娘桌面挂件：无边框透明置顶窗，读 Host 写的 state.json 切换表情与语音。
-# 单实例；关掉后不会自动重开（重启 DSH 或重新启用插件才会）。
+# 鲸鱼娘桌面挂件：无边框透明置顶窗 + 系统托盘图标。
+# 状态来自 Host 写的 state.json（带心跳 at）；超过 75 秒没更新就显示“离线”。
 
 Add-Type -AssemblyName PresentationFramework
 Add-Type -AssemblyName PresentationCore
 Add-Type -AssemblyName WindowsBase
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
 
 $mutex = New-Object System.Threading.Mutex($false, 'Local\dsh-whale-pet-widget')
 $owned = $false
@@ -20,18 +22,22 @@ $scriptDir = Split-Path -Parent $StatePath
 if (-not (Test-Path $scriptDir)) { New-Item -ItemType Directory -Force -Path $scriptDir | Out-Null }
 $configPath = Join-Path $scriptDir 'widget.json'
 $logPath = Join-Path $scriptDir 'widget.log'
+
 function Log([string]$message) {
   try { Add-Content -LiteralPath $logPath -Value ("[{0:yyyy-MM-dd HH:mm:ss}] {1}" -f (Get-Date), $message) -Encoding UTF8 } catch { }
 }
 trap { Log ('TRAP: ' + $_.Exception.ToString()); exit 1 }
-Log "start (mutex owned) state=$StatePath assets=$AssetsDir"
+Log "start state=$StatePath assets=$AssetsDir"
 
 $script:phase = ''
 $script:armed = $false
 $script:left = 0
 $script:shutdownTimer = $null
+$script:lastStateAt = [datetime]::MinValue
+$script:statePhase = 'idle'
 $script:player = New-Object System.Windows.Media.MediaPlayer
 $script:player.Volume = 0.9
+$script:notify = $null
 
 function Read-Config {
   if (-not (Test-Path $configPath)) { return $null }
@@ -39,7 +45,7 @@ function Read-Config {
 }
 
 function Save-Config {
-  $payload = @{ left = [int]$window.Left; top = [int]$window.Top; armed = [bool]$script:armed } | ConvertTo-Json
+  $payload = @{ left = [int]$script:windowLeft; top = [int]$script:windowTop; armed = [bool]$script:armed } | ConvertTo-Json
   try { Set-Content -LiteralPath $configPath -Value $payload -Encoding UTF8 -ErrorAction Stop } catch { }
 }
 
@@ -77,11 +83,6 @@ function Brush([int]$r, [int]$g, [int]$b) {
       <StackPanel Orientation="Horizontal">
         <Ellipse x:Name="Dot" Width="6" Height="6" Fill="#C9CCD1" Margin="0,0,5,0" VerticalAlignment="Center"/>
         <TextBlock x:Name="Chip" FontSize="11" Foreground="#3A4654" Text="空闲" VerticalAlignment="Center" FontFamily="Microsoft YaHei"/>
-        <Button x:Name="ArmButton" Content="关" FontSize="11" Width="20" Height="18" Margin="8,0,0,0" Padding="0"
-                BorderThickness="0" Background="Transparent" FontFamily="Microsoft YaHei"
-                ToolTip="武装：完成一轮后 60 秒关机"/>
-        <Button x:Name="CloseButton" Content="×" FontSize="13" Width="18" Height="18" Margin="2,0,0,0" Padding="0"
-                BorderThickness="0" Background="Transparent" ToolTip="关闭桌宠"/>
       </StackPanel>
     </Border>
     <TextBlock x:Name="Countdown" Grid.Row="2" Visibility="Collapsed" HorizontalAlignment="Center"
@@ -96,8 +97,6 @@ $window = [Windows.Markup.XamlReader]::Load($reader)
 $still = $window.FindName('Still')
 $dot = $window.FindName('Dot')
 $chip = $window.FindName('Chip')
-$armButton = $window.FindName('ArmButton')
-$closeButton = $window.FindName('CloseButton')
 $countdown = $window.FindName('Countdown')
 
 $poses = @{
@@ -106,15 +105,17 @@ $poses = @{
   waiting = Load-Image (Join-Path $AssetsDir 'anim\waiting.png')
   done = Load-Image (Join-Path $AssetsDir 'anim\done.png')
   error = Load-Image (Join-Path $AssetsDir 'anim\waiting.png')
+  offline = Load-Image (Join-Path $AssetsDir 'anim\idle.png')
 }
 
-$labels = @{ idle = '空闲'; running = '运行中'; waiting = '等你回复'; done = '刚完成'; error = '出错了' }
+$labels = @{ idle = '空闲'; running = '运行中'; waiting = '等你回复'; done = '刚完成'; error = '出错了'; offline = '离线' }
 $dots = @{
   idle = Brush 201 204 209
   running = Brush 77 107 254
   waiting = Brush 224 160 58
   done = Brush 47 170 107
   error = Brush 217 83 79
+  offline = Brush 160 160 160
 }
 
 # 轻微浮动 + 摇摆
@@ -155,20 +156,6 @@ function Pick-Voice([string[]]$names) {
   return $names[(Get-Random -Minimum 0 -Maximum $names.Count)]
 }
 
-function Update-ArmButton {
-  if ($script:armed) {
-    $armButton.Background = Brush 224 160 58
-    $armButton.Foreground = Brush 255 255 255
-    $armButton.Content = '关'
-    $armButton.ToolTip = '已武装：完成一轮后 60 秒关机，点此取消'
-  } else {
-    $armButton.Background = New-Object System.Windows.Media.SolidColorBrush([System.Windows.Media.Colors]::Transparent)
-    $armButton.Foreground = Brush 58 70 84
-    $armButton.Content = '关'
-    $armButton.ToolTip = '武装：完成一轮后 60 秒关机'
-  }
-}
-
 function Stop-Countdown {
   if ($script:shutdownTimer -ne $null) { $script:shutdownTimer.Stop(); $script:shutdownTimer = $null }
   $script:left = 0
@@ -178,8 +165,9 @@ function Stop-Countdown {
 function Do-Shutdown {
   Stop-Countdown
   $script:armed = $false
+  Update-ArmedMenu
   Save-Config
-  Update-ArmButton
+  Log 'shutdown scheduled'
   try { & shutdown.exe /s /t 15 | Out-Null } catch { }
 }
 
@@ -200,15 +188,27 @@ function Start-Countdown {
   Step-Countdown
 }
 
+function Update-NotifyText([string]$next) {
+  if ($script:notify -eq $null) { return }
+  $label = $labels[$next]
+  if ($label -eq $null) { $label = '空闲' }
+  try { $script:notify.Text = "鲸鱼娘 · $label" } catch { }
+  if ($script:statusItem -ne $null) {
+    try { $script:statusItem.Text = "状态：$label" } catch { }
+  }
+}
+
 function Set-Phase([string]$next) {
   if (-not $labels.ContainsKey($next)) { $next = 'idle' }
-  # 关机倒计时期间保持“完成”姿势，别被 Host 的 idle 复位打断
+  # 关机倒计时期间保持“完成”姿势
   if ($next -eq 'idle' -and $script:shutdownTimer -ne $null) { return }
   if ($script:phase -eq $next) { return }
   $script:phase = $next
+  Log "phase -> $next"
   if ($poses[$next] -ne $null) { $still.Source = $poses[$next] }
   $chip.Text = $labels[$next]
   $dot.Fill = $dots[$next]
+  Update-NotifyText $next
   switch ($next) {
     'running' { Speak (Pick-Voice @('running-1.mp3', 'running-2.mp3')) }
     'waiting' { Speak 'approval.mp3' }
@@ -219,17 +219,29 @@ function Set-Phase([string]$next) {
   if ($next -eq 'running') { Stop-Countdown }
 }
 
+function EffectivePhase {
+  if ($script:lastStateAt -eq [datetime]::MinValue) { return 'offline' }
+  if (((Get-Date) - $script:lastStateAt).TotalSeconds -gt 75) { return 'offline' }
+  return $script:statePhase
+}
+
 function Poll-State {
   if (-not (Test-Path $StatePath)) { return }
   try {
     $raw = Get-Content -LiteralPath $StatePath -Raw -ErrorAction Stop
     if (-not $raw) { return }
     $state = $raw | ConvertFrom-Json
-    if ($state.phase) { Set-Phase $state.phase }
+    if ($state.at) {
+      $script:lastStateAt = [DateTimeOffset]::FromUnixTimeMilliseconds([long]$state.at).LocalDateTime
+    } else {
+      $script:lastStateAt = (Get-Item $StatePath).LastWriteTime
+    }
+    if ($state.phase) { $script:statePhase = $state.phase }
+    Set-Phase (EffectivePhase)
   } catch { }
 }
 
-# 位置：优先上次的位置，否则右下角
+# 位置
 $config = Read-Config
 $area = [System.Windows.SystemParameters]::WorkArea
 $defaultLeft = $area.Right - 240
@@ -239,30 +251,79 @@ $window.Top = $defaultTop
 if ($config -ne $null -and $config.left -ne $null -and $config.top -ne $null) {
   $candidateLeft = [double]$config.left
   $candidateTop = [double]$config.top
-  # 保存的位置可能来自不同缩放比例或已拔掉的显示器；超出工作区就回默认角
   if ($candidateLeft -ge $area.Left -and $candidateLeft -le ($area.Right - 120) -and $candidateTop -ge $area.Top -and $candidateTop -le ($area.Bottom - 80)) {
     $window.Left = $candidateLeft
     $window.Top = $candidateTop
   } else {
-    Log "saved position $candidateLeft,$candidateTop outside work area $($area.Width)x$($area.Height); using the default corner"
+    Log "saved position $candidateLeft,$candidateTop outside work area; using the default corner"
   }
 }
-Log ("work area {0},{1} {2}x{3}; window at {4},{5}" -f $area.Left, $area.Top, $area.Width, $area.Height, $window.Left, $window.Top)
-# 武装状态不跨进程恢复：每次启动都从“未武装”开始，避免几天前武装的实例误触发关机
-Update-ArmButton
+$script:windowLeft = $window.Left
+$script:windowTop = $window.Top
+Log ("window at {0},{1}" -f $window.Left, $window.Top)
+
+# 托盘图标
+try {
+  $script:notify = New-Object System.Windows.Forms.NotifyIcon
+  $icoPath = Join-Path $AssetsDir 'tray.ico'
+  if (Test-Path $icoPath) { $script:notify.Icon = New-Object System.Drawing.Icon $icoPath }
+  $script:notify.Text = '鲸鱼娘 · 空闲'
+  $menu = New-Object System.Windows.Forms.ContextMenuStrip
+  $script:statusItem = New-Object System.Windows.Forms.ToolStripMenuItem '状态：空闲'
+  $script:statusItem.Enabled = $false
+  $showItem = New-Object System.Windows.Forms.ToolStripMenuItem '显示 / 隐藏'
+  $armItem = New-Object System.Windows.Forms.ToolStripMenuItem '完成后关机'
+  $armItem.CheckOnClick = $true
+  $armItem.Checked = $script:armed
+  $cancelItem = New-Object System.Windows.Forms.ToolStripMenuItem '取消关机倒计时'
+  $quitItem = New-Object System.Windows.Forms.ToolStripMenuItem '退出鲸鱼娘'
+  [void]$menu.Items.Add($script:statusItem)
+  [void]$menu.Items.Add((New-Object System.Windows.Forms.ToolStripSeparator))
+  [void]$menu.Items.Add($showItem)
+  [void]$menu.Items.Add($armItem)
+  [void]$menu.Items.Add($cancelItem)
+  [void]$menu.Items.Add((New-Object System.Windows.Forms.ToolStripSeparator))
+  [void]$menu.Items.Add($quitItem)
+  $script:notify.ContextMenuStrip = $menu
+  $showItem.Add_Click({ if ($window.Visibility -eq 'Visible') { $window.Hide() } else { $window.Show() } })
+  $armItem.Add_Click({
+    $script:armed = $armItem.Checked
+    if (-not $script:armed) { Stop-Countdown }
+    Save-Config
+  })
+  $cancelItem.Add_Click({
+    Stop-Countdown
+    try { & shutdown.exe /a | Out-Null } catch { }
+  })
+  $quitItem.Add_Click({ $window.Close() })
+  $script:notify.Add_MouseClick({
+    param($sender, $eventArgs)
+    if ($eventArgs.Button -eq [System.Windows.Forms.MouseButtons]::Left) {
+      if ($window.Visibility -eq 'Visible') { $window.Hide() } else { $window.Show() }
+    }
+  })
+  $script:notify.Visible = $true
+  Log 'tray icon ready'
+} catch {
+  Log ('tray failed: ' + $_.Exception.Message)
+}
+
+$armItemRef = $menu.Items | Where-Object { $_.Text -eq '完成后关机' }
+function Update-ArmedMenu {
+  if ($armItemRef -ne $null) { try { $armItemRef.Checked = $script:armed } catch { } }
+}
 
 $still.Add_MouseLeftButtonDown({ try { $window.DragMove() } catch { } })
-$window.Add_MouseLeftButtonUp({ Save-Config })
-$closeButton.Add_Click({ $window.Close() })
-$armButton.Add_Click({
-  $script:armed = -not $script:armed
-  if (-not $script:armed) { Stop-Countdown }
-  Update-ArmButton
+$window.Add_LocationChanged({ $script:windowLeft = $window.Left; $script:windowTop = $window.Top })
+$window.Add_Closed({
   Save-Config
-})
-$countdown.Add_MouseLeftButtonDown({
   Stop-Countdown
-  & shutdown.exe /a | Out-Null
+  if ($script:notify -ne $null) {
+    try { $script:notify.Visible = $false; $script:notify.Dispose() } catch { }
+  }
+  try { $script:player.Close() } catch { }
+  try { $mutex.ReleaseMutex() } catch { }
+  Log 'closed'
 })
 
 $poll = New-Object System.Windows.Threading.DispatcherTimer
@@ -270,7 +331,11 @@ $poll.Interval = [TimeSpan]::FromMilliseconds(400)
 $poll.Add_Tick({ Poll-State })
 $poll.Start()
 
-# 每 10 分钟若无事发生，随机嘟囔一句
+$beat = New-Object System.Windows.Threading.DispatcherTimer
+$beat.Interval = [TimeSpan]::FromSeconds(2)
+$beat.Add_Tick({ Set-Phase (EffectivePhase) })
+$beat.Start()
+
 $chatter = New-Object System.Windows.Threading.DispatcherTimer
 $chatter.Interval = [TimeSpan]::FromMinutes(10)
 $chatter.Add_Tick({
@@ -280,14 +345,5 @@ $chatter.Add_Tick({
 })
 $chatter.Start()
 
-$window.Add_Closed({
-  Stop-Countdown
-  $poll.Stop()
-  $chatter.Stop()
-  try { $script:player.Close() } catch { }
-  try { $mutex.ReleaseMutex() } catch { }
-})
-
 Log 'showing'
 $window.ShowDialog() | Out-Null
-Log 'closed'

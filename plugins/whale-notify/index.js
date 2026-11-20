@@ -91,30 +91,58 @@ export function apply(ctx) {
     console.error('[whale-pet] cannot spawn the desktop widget', error)
   }
 
+  /** When the current "waiting for you" pose expires. */
+  let waitingUntil = 0
+  /** Recompute the pose from the live set; `waiting` only outranks it while fresh. */
+  const settle = () => {
+    if (pending() > 0) setPhase('running')
+    else setPhase('done')
+  }
+  const pending = () => running.size
+
   ctx.on('api-session/status', (sessionId, isRunning) => {
     if (isRunning) running.add(sessionId)
     else running.delete(sessionId)
-    if (running.size > 0) {
-      // A pending question outranks the generic running pose.
-      if (phase !== 'waiting') setPhase('running')
-      return
-    }
-    if (phase !== 'waiting') setPhase('done')
+    waitingUntil = 0
+    settle()
   })
-  ctx.on('api-session/error', () => { setPhase('error') })
+  ctx.on('api-session/error', () => {
+    waitingUntil = 0
+    setPhase('error')
+  })
   // Observe before the answerers claim the request, then hand it on untouched.
   ctx.on('user-questions/request', (_request, next) => {
+    waitingUntil = Date.now() + 90000
     setPhase('waiting')
     return next()
   }, { prepend: true })
   ctx.on('approval/request', (_request, next) => {
+    waitingUntil = Date.now() + 90000
     setPhase('waiting')
     return next()
   }, { prepend: true })
 
+  // Heartbeat: refresh the state file so the widget can tell "still connected"
+  // from "DSH went away", and drop a stale waiting pose.
+  const beat = setInterval(() => {
+    if (stopped) return
+    if (waitingUntil !== 0 && Date.now() > waitingUntil) {
+      waitingUntil = 0
+      settle()
+    }
+    writeState()
+  }, 15000)
+  if (typeof beat.unref === 'function') beat.unref()
+
   ctx.effect(() => () => {
     stopped = true
+    clearInterval(beat)
     if (resetTimer !== null) clearTimeout(resetTimer)
+    try {
+      writeFileSync(STATE_PATH, JSON.stringify({ phase: 'offline', at: Date.now() }), 'utf8')
+    } catch (error) {
+      // The widget falls back to its heartbeat timeout.
+    }
     // A countdown may already have queued the OS shutdown; cancel it.
     try {
       spawn('shutdown.exe', ['/a'], { windowsHide: true, stdio: 'ignore' })
