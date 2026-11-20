@@ -55,14 +55,14 @@ foreach ($extra in @("README.md", "LICENSE")) {
     if ($files -notcontains $extra) { $files += $extra }
 }
 $pkg | Add-Member -NotePropertyName files -NotePropertyValue $files -Force
-($pkg | ConvertTo-Json -Depth 10).Replace("\u003e", ">").Replace("\u003c", "<") | Set-Content $pkgPath -Encoding UTF8
+[IO.File]::WriteAllText($pkgPath, ($pkg | ConvertTo-Json -Depth 10).Replace("\u003e", ">").Replace("\u003c", "<"), (New-Object System.Text.UTF8Encoding($false)))
 
 # ---------- cordis.patch.yml：把 @local/<Name> 换成新包名 ----------
 $patchPath = Join-Path $dst 'cordis.patch.yml'
 if (Test-Path $patchPath) {
     $patch = Get-Content $patchPath -Raw -Encoding UTF8
     $patch = $patch.Replace("@local/$Name", $RepoName)
-    Set-Content $patchPath -Value $patch -Encoding UTF8 -NoNewline
+    [IO.File]::WriteAllText($patchPath, $patch, (New-Object System.Text.UTF8Encoding($false)))
 }
 
 # ---------- LICENSE / README ----------
@@ -99,7 +99,7 @@ $(if (Test-Path $patchPath) { (Get-Content $patchPath -Raw -Encoding UTF8).Trim(
 
 MIT，见 [LICENSE](LICENSE)。
 "@
-Set-Content (Join-Path $dst 'README.md') -Value $readme -Encoding UTF8
+[IO.File]::WriteAllText((Join-Path $dst 'README.md'), $readme, (New-Object System.Text.UTF8Encoding($false)))
 
 # ---------- .gitignore ----------
 @"
@@ -111,6 +111,14 @@ dist/
 build/
 "@ | Set-Content (Join-Path $dst '.gitignore') -Encoding UTF8
 
+# 统一去掉 UTF-8 BOM：JSON/YAML 解析器对 BOM 不一定宽容（Node 的 JSON.parse 会直接报错）
+$bomFiles = Get-ChildItem $dst -Recurse -File | Where-Object { $_.Extension -in @('.json', '.yml', '.yaml', '.md', '.js', '.mjs', '.svg', '.ps1', '.py', '.cmd', '.txt') -or $_.Name -eq '.gitignore' }
+foreach ($bf in $bomFiles) {
+    $bytes = [IO.File]::ReadAllBytes($bf.FullName)
+    if ($bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF) {
+        [IO.File]::WriteAllBytes($bf.FullName, $bytes[3..($bytes.Length - 1)])
+    }
+}
 Write-Host "已生成：$dst" -ForegroundColor Green
 Write-Host ("  包名：{0}  版本：{1}" -f $pkg.name, $pkg.version)
 Get-ChildItem $dst | Select-Object Name, Length | Format-Table -AutoSize | Out-String | Write-Host
@@ -123,7 +131,7 @@ if ($Push) {
     git -C $dst add -A
     git -C $dst commit -q -m "初始化：$RepoName $Version（从 DIY-code/plugins/$Name 拆出）"
     git -C $dst remote add origin $remote
-    git -C $dst push -u origin main
+    git -C $dst push -u --force origin main
     if ($LASTEXITCODE -ne 0) { throw "推送失败，仓库 $remote 可能还不存在（需要先在 GitHub 上创建空的 public 仓库）" }
     Write-Host "已推送：https://github.com/$Owner/$RepoName" -ForegroundColor Green
 } else {
