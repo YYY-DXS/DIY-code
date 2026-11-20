@@ -21,7 +21,9 @@
   支持**搜索**（名称/描述/作者）、**排序**（Star / 最近更新 / 名称）、**仅 Verified** 过滤、分页浏览。
 - **一键安装 / 卸载**：调用 DSH 官方 CLI（`dsh plugin --profile <profile> add|remove <spec>`，内部转发 pnpm），
   npm 包与 `github:owner/repo` 两种来源都支持；安装成功后自动写入 profile 的 `dsh.profile.bundles`
-- **按需诊断**：插件库里每个插件都有「诊断」按钮，单插件实时检查 GitHub 仓库 / npm 元数据 / 兼容性
+- **英文描述实时翻译**：插件的英文描述（精选详情 / 插件库卡片）自动译成中文，
+  走有道公开线路（和 Lumen 译同一条），带内存 + 本地缓存；详情里按 `T` 或点「译文」按钮
+  可以切回原文，网页版右上角有「译英文」总开关。
 - **兼容性诊断（精选）**：安装前逐项检查
   - 本机 DSH 版本（读取 `DeepSeek Harness.exe` 运行版本）
   - 本机 Node 版本 vs 插件 `engines.node`

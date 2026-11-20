@@ -5,8 +5,11 @@ const state = {
   running: false,
   reports: [],
   browseHistory: null,
-  historyTab: "viewed"
+  historyTab: "viewed",
+  translateOn: localStorage.getItem("techpulse.translate") !== "off"
 };
+
+const trClientCache = new Map();
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
@@ -133,6 +136,76 @@ function formatDate(value) {
   }).format(date);
 }
 
+function syncTranslateButton() {
+  const button = $("#translate-button");
+  if (!button) return;
+  button.classList.toggle("is-active", state.translateOn);
+  button.setAttribute("aria-pressed", state.translateOn ? "true" : "false");
+  const label = $("#translate-button-label");
+  if (label) label.textContent = state.translateOn ? "译英文：开" : "译英文：关";
+}
+
+function restoreTranslations() {
+  $$("[data-tr][data-tr-orig]").forEach((node) => {
+    node.textContent = node.dataset.trOrig;
+    node.classList.remove("is-translated");
+    node.removeAttribute("title");
+  });
+}
+
+function toggleTranslation(node) {
+  const showingTranslation = node.textContent === node.dataset.trNew;
+  node.textContent = showingTranslation ? node.dataset.trOrig : node.dataset.trNew;
+  node.classList.toggle("is-translated", !showingTranslation);
+}
+
+function setTranslate(on) {
+  state.translateOn = Boolean(on);
+  localStorage.setItem("techpulse.translate", state.translateOn ? "on" : "off");
+  syncTranslateButton();
+  if (state.translateOn) translateRendered();
+  else restoreTranslations();
+}
+
+/**
+ * 把页面上带 data-tr 的英文块（标题 / 摘要 / whyItMatters / 摘录）批量译成中文。
+ * 原文留在 data-tr-orig，点一下可以来回切换。
+ */
+async function translateRendered() {
+  if (!state.translateOn) return;
+  const nodes = $$("[data-tr]").filter((node) => !node.dataset.trDone && node.textContent.trim());
+  if (!nodes.length) return;
+
+  const unique = [...new Set(nodes.map((node) => node.textContent.trim()))];
+  const missing = unique.filter((text) => !trClientCache.has(text));
+  if (missing.length) {
+    try {
+      const payload = await api("/api/translate", {
+        method: "POST",
+        body: JSON.stringify({ texts: missing.slice(0, 60) })
+      });
+      missing.forEach((text, index) => {
+        const value = payload.translations?.[index];
+        trClientCache.set(text, value && value !== text ? value : "");
+      });
+    } catch (error) {
+      showToast(`翻译暂时不可用：${error.message}`);
+    }
+  }
+
+  for (const node of nodes) {
+    node.dataset.trDone = "1";
+    const original = node.textContent.trim();
+    const translated = trClientCache.get(original);
+    if (!translated) continue;
+    node.dataset.trOrig = original;
+    node.dataset.trNew = translated;
+    node.textContent = translated;
+    node.classList.add("is-translated");
+    if (!node.closest("a")) node.title = `原文：${original}`;
+  }
+}
+
 function renderReport(report) {
   state.currentReport = report;
   $("#welcome").hidden = true;
@@ -171,6 +244,7 @@ function renderReport(report) {
       : "本次未取得有效内容，请检查网络或来源设置",
     report.news.length || report.diy.length ? "ready" : "error"
   );
+  translateRendered();
 }
 
 function renderStory(item) {
@@ -196,26 +270,26 @@ function renderStory(item) {
       <div class="story-rank">${String(item.rank).padStart(2, "0")}</div>
       <div>
         <h3 class="story-title">
-          <a data-track-id="${escapeHtml(item.id)}" href="${escapeHtml(safeUrl(item.url))}" target="_blank" rel="noopener noreferrer">
+          <a data-track-id="${escapeHtml(item.id)}" data-tr href="${escapeHtml(safeUrl(item.url))}" target="_blank" rel="noopener noreferrer">
             ${escapeHtml(item.title)}
           </a>
         </h3>
         ${image}
-        <p class="story-summary">${escapeHtml(
+        <p class="story-summary" data-tr>${escapeHtml(
           truncate(item.pageDescription || item.summary || "打开原文查看详细报道。")
         )}</p>
         ${
           hasLongContent
             ? `<details class="story-excerpt">
                 <summary>展开网页正文摘录${item.mediaOffline ? " · 来自本地缓存" : ""}</summary>
-                <p>${escapeHtml(truncate(item.content, 1_100))}</p>
+                <p data-tr>${escapeHtml(truncate(item.content, 1_100))}</p>
               </details>`
             : ""
         }
         <div class="story-meta">
           <span class="story-source">${escapeHtml(item.sourceStatus || item.source)}</span>
           <span>${escapeHtml(formatDate(item.publishedAt))}</span>
-          <span class="story-why">${escapeHtml(item.whyItMatters)}</span>
+          <span class="story-why" data-tr>${escapeHtml(item.whyItMatters)}</span>
         </div>
         ${interests ? `<div class="interest-row">${interests}</div>` : ""}
         ${tags ? `<div class="story-tags">${tags}</div>` : ""}
@@ -256,18 +330,18 @@ function renderProject(item) {
       </div>
       ${image}
       <h3 class="project-title">
-        <a data-track-id="${escapeHtml(item.id)}" href="${escapeHtml(safeUrl(item.url))}" target="_blank" rel="noopener noreferrer">
+        <a data-track-id="${escapeHtml(item.id)}" data-tr href="${escapeHtml(safeUrl(item.url))}" target="_blank" rel="noopener noreferrer">
           ${escapeHtml(item.title)}
         </a>
       </h3>
-      <p class="project-summary">${escapeHtml(
+      <p class="project-summary" data-tr>${escapeHtml(
         truncate(item.pageDescription || item.summary || "这是一个值得打开看看的新项目。", 165)
       )}</p>
       ${
         hasLongContent
           ? `<details class="project-excerpt">
               <summary>展开说明${item.mediaOffline ? " · 离线缓存" : ""}</summary>
-              <p>${escapeHtml(truncate(item.content, 900))}</p>
+              <p data-tr>${escapeHtml(truncate(item.content, 900))}</p>
             </details>`
           : ""
       }
@@ -275,7 +349,7 @@ function renderProject(item) {
       <div class="project-bottom">
         <div class="story-tags">${tags || `<span class="tag">DIY</span>`}</div>
         <div class="project-metric">
-          ${escapeHtml(item.whyItMatters)}
+          <span data-tr>${escapeHtml(item.whyItMatters)}</span>
           <br />
           <a class="open-link" data-track-id="${escapeHtml(item.id)}" href="${escapeHtml(safeUrl(item.url))}" target="_blank" rel="noopener noreferrer">查看项目</a>
         </div>
@@ -607,7 +681,14 @@ function showReader(item) {
   $("#reader-meta").textContent = `${item.source || "其他"} · ${
     item.category === "diy" ? "DIY 项目" : "科技新闻"
   } · ${formatDate(item.publishedAt) || item.reportDate || ""}`;
-  $("#reader-title").textContent = item.title;
+  const readerTitle = $("#reader-title");
+  readerTitle.textContent = item.title;
+  readerTitle.setAttribute("data-tr", "");
+  delete readerTitle.dataset.trDone;
+  delete readerTitle.dataset.trOrig;
+  delete readerTitle.dataset.trNew;
+  readerTitle.classList.remove("is-translated");
+  readerTitle.removeAttribute("title");
   $("#reader-source-link").href = safeUrl(item.url);
   $("#reader-interests").innerHTML = (item.matchedInterests ?? [])
     .map((interest) => `<span class="interest-chip">命中 · ${escapeHtml(interest)}</span>`)
@@ -625,6 +706,7 @@ function showReader(item) {
   $("#reader-overlay").hidden = false;
   document.body.style.overflow = "hidden";
   $("#reader-close").focus();
+  translateRendered();
 }
 
 function recordOpen(event) {
@@ -707,6 +789,15 @@ async function init() {
     }, 320);
   });
   $("#history-button").addEventListener("click", openHistory);
+  $("#translate-button").addEventListener("click", () => setTranslate(!state.translateOn));
+  document.addEventListener("click", (event) => {
+    if (event.defaultPrevented || event.ctrlKey || event.metaKey) return;
+    const node = event.target.closest?.("[data-tr][data-tr-orig]");
+    if (!node || node.closest("a")) return;
+    event.preventDefault();
+    toggleTranslation(node);
+  });
+  syncTranslateButton();
   $("#settings-form").addEventListener("submit", submitSettings);
   $("#test-notification").addEventListener("click", testNotification);
   $("#drawer-backdrop").addEventListener("click", closeDrawers);

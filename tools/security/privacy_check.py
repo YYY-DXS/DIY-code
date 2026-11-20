@@ -107,6 +107,9 @@ PLACEHOLDER = re.compile(
 
 SKIP_PATHS = {"tools/security/privacy_check.py", "apps/manifest.json"}
 
+# 程序入口 HTML 是源码，.gitignore 已单独放行；仍然扫描内容，只是不按文件类型拦截
+ALLOW_HTML = {"apps/tech-pulse/public/index.html", "apps/dsh-plugin-pulse/ui.html"}
+
 TEXT_EXT = {
     ".md", ".txt", ".json", ".jsonl", ".py", ".mjs", ".js", ".ts", ".cmd", ".bat",
     ".ps1", ".sh", ".yml", ".yaml", ".toml", ".ini", ".cfg", ".cpp", ".c", ".h",
@@ -188,7 +191,8 @@ def scan(paths: list[str]) -> list[tuple[str, int, str, str, str]]:
             continue
         path = Path(rel)
         suffix = path.suffix.lower()
-        if suffix in BLOCK_EXT:
+        key = rel.replace("\\", "/")
+        if suffix in BLOCK_EXT and key not in ALLOW_HTML:
             findings.append((rel, 0, "不该上传的文件类型", suffix, "block"))
             continue
         if path.name in BLOCK_NAMES or set(path.parts) & BLOCK_PARTS:

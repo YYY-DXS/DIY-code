@@ -27,3 +27,9 @@ apps/desktop-widget/api.txt
 
 # Lumen 译的运行时数据（配置可能含 API Key、历史记录）
 apps/lumen-translate/data/
+
+# DeepSeek Hub 的本地知识库（个人数据）
+knowledge/
+
+# 科技脉冲打包输出
+apps/TechPulse/

@@ -10,7 +10,7 @@ import {
 } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import * as esbuild from "esbuild-wasm";
+import * as esbuild from "esbuild";
 import * as PELibrary from "pe-library";
 import * as ResEdit from "resedit";
 

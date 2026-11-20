@@ -43,6 +43,13 @@ BUNDLED_CATALOG = _BASE / "catalog.json"
 DATA_DIR = Path(os.environ.get("DSH_INSTALLER_HOME") or (Path(os.environ.get("LOCALAPPDATA") or Path.home()) / "DSHPluginInstaller"))
 CATALOG_EXTERNAL = DATA_DIR / "catalog.json"
 
+# 英文描述实时翻译（有道线路，带缓存）；模块缺失时面板照常工作
+try:
+    from translate import Translator as _Translator
+    TRANSLATOR = _Translator(DATA_DIR / "translate-cache.json")
+except Exception:
+    TRANSLATOR = None
+
 PROFILES_DIR = None          # 在 main() 中探测
 APP_DIR = None
 DSH_EXE = None
@@ -980,6 +987,15 @@ class Handler(BaseHTTPRequestHandler):
             self._json(200, {"ok": True})
             threading.Thread(target=lambda: (time.sleep(0.3), os._exit(0)), daemon=True).start()
             return
+        if path == "/api/translate":
+            if TRANSLATOR is None:
+                return self._json(503, {"error": "翻译模块不可用"})
+            texts = data.get("texts") if isinstance(data.get("texts"), list) else []
+            texts = [str(t or "")[:1200] for t in texts[:60]]
+            try:
+                return self._json(200, {"ok": True, "translations": TRANSLATOR.translate_many(texts)})
+            except Exception as exc:
+                return self._json(500, {"error": str(exc)})
         return self._json(404, {"error": "not found"})
 
     def _catalog_payload(self):

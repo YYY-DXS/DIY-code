@@ -138,6 +138,8 @@
   footer{padding:0 32px 30px;color:#5b6472;font-size:12px}
   footer code{color:#8b949e}
   .empty{color:var(--dim);padding:30px 0;text-align:center;grid-column:1/-1}
+  #tr-toggle.tr-on{color:var(--ok);border-color:var(--ok)}
+  .c-sum.tr-on{border-bottom:1px dashed var(--ok);cursor:pointer}
 </style>
 </head>
 <body>
@@ -150,6 +152,7 @@
 <div class="tabs">
   <button class="tab active" data-tab="picks">精选推荐 <span class="cnt" id="picks-count"></span></button>
   <button class="tab" data-tab="lib">插件库 <span class="cnt" id="lib-count"></span></button>
+  <button class="tab" id="tr-toggle" type="button" style="margin-left:auto" title="把英文描述实时译成中文；点译文可切回原文">译英文：开</button>
 </div>
 
 <div class="banner">⚠ 安装/卸载是真实操作，装完需<b>重启 DeepSeek Harness</b> 才生效。诊断按 npm 最新元数据比对，仅供参考。</div>
@@ -216,6 +219,8 @@ const state = {
   libMeta: null,
   libTimer: null,
   diagCache: new Map(),
+  translateOn: localStorage.getItem('dshp.translate') !== 'off',
+  trCache: new Map(),
 };
 
 function el(tag, cls, text) {
@@ -234,6 +239,69 @@ function chip(label, value, cls) {
   const c = el('span', 'chip' + (cls ? ' ' + cls : ''), label + ' ');
   c.appendChild(el('b', '', value));
   return c;
+}
+
+/* ------------------------- 英文描述实时翻译 ------------------------- */
+function syncTranslateButton() {
+  const btn = $('tr-toggle');
+  if (!btn) return;
+  btn.textContent = state.translateOn ? '译英文：开' : '译英文：关';
+  btn.classList.toggle('tr-on', state.translateOn);
+}
+
+function restoreTranslations() {
+  document.querySelectorAll('.c-sum[data-orig]').forEach((node) => {
+    node.textContent = node.dataset.orig;
+    node.classList.remove('tr-on');
+  });
+}
+
+async function translateWithin(container) {
+  if (!state.translateOn || !container) return;
+  const nodes = [...container.querySelectorAll('.c-sum')].filter(
+    (node) => !node.dataset.trDone && node.textContent.trim()
+  );
+  if (!nodes.length) return;
+  const unique = [...new Set(nodes.map((node) => node.textContent.trim()))];
+  const missing = unique.filter((text) => !state.trCache.has(text));
+  if (missing.length) {
+    try {
+      const res = await api('/api/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ texts: missing })
+      });
+      missing.forEach((text, index) => {
+        const value = res.translations?.[index];
+        state.trCache.set(text, value && value !== text ? value : '');
+      });
+    } catch (error) {
+      console.warn('翻译失败', error);
+    }
+  }
+  for (const node of nodes) {
+    node.dataset.trDone = '1';
+    const original = node.textContent.trim();
+    const translated = state.trCache.get(original);
+    if (!translated) continue;
+    node.dataset.orig = original;
+    node.dataset.tr = translated;
+    node.textContent = translated;
+    node.title = '原文：' + original;
+    node.classList.add('tr-on');
+  }
+}
+
+function setTranslate(on) {
+  state.translateOn = Boolean(on);
+  localStorage.setItem('dshp.translate', state.translateOn ? 'on' : 'off');
+  syncTranslateButton();
+  if (!state.translateOn) {
+    restoreTranslations();
+    return;
+  }
+  translateWithin($('grid'));
+  translateWithin($('lib-grid'));
 }
 const VERDICT = {
   compatible: { cls: 'v-ok', text: '兼容' },
@@ -317,6 +385,7 @@ function renderPicks() {
     card.appendChild(actions);
     grid.appendChild(card);
   }
+  translateWithin(grid);
 }
 function renderDiag() {
   const d = state.diag; if (!d) return;
@@ -429,6 +498,7 @@ async function loadLib() {
     if (!res.items.length) { grid.appendChild(el('div', 'empty', '没有匹配的插件（或插件库还在扫描中，稍等几秒）')); }
     for (const it of res.items) grid.appendChild(libCard(it));
     renderPager();
+    translateWithin(grid);
   } catch (e) {
     $('lib-grid').innerHTML = ''; $('lib-grid').appendChild(el('div', 'empty', '加载失败：' + e.message));
   }
@@ -503,12 +573,21 @@ async function loadAll() {
 }
 function switchTab(view) {
   state.view = view;
-  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === view));
+  document.querySelectorAll('.tab[data-tab]').forEach(t => t.classList.toggle('active', t.dataset.tab === view));
   $('tab-picks').classList.toggle('hidden', view !== 'picks');
   $('tab-lib').classList.toggle('hidden', view !== 'lib');
   if (view === 'lib') loadLib();
+  else translateWithin($('grid'));
 }
-document.querySelectorAll('.tab').forEach(t => t.onclick = () => switchTab(t.dataset.tab));
+document.querySelectorAll('.tab[data-tab]').forEach(t => t.onclick = () => switchTab(t.dataset.tab));
+$('tr-toggle').onclick = () => setTranslate(!state.translateOn);
+document.addEventListener('click', (event) => {
+  const node = event.target.closest?.('.c-sum[data-orig]');
+  if (!node) return;
+  event.preventDefault();
+  node.textContent = node.textContent === node.dataset.tr ? node.dataset.orig : node.dataset.tr;
+});
+syncTranslateButton();
 
 $('refresh').onclick = () => { if (!state.busy) loadAll(); };
 $('rerun-diag').onclick = () => { if (!state.diagBusy) diagnose(); };

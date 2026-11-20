@@ -30,6 +30,10 @@ try:
     import server as core
 except Exception as exc:  # pragma: no cover
     raise SystemExit(f"无法导入 server.py（数据层）: {exc}")
+try:
+    import translate as trlib
+except Exception:  # 翻译模块缺失时面板照常可用
+    trlib = None
 
 # ------------------------------------------------------------------ 主题色 --
 BG = "#04070c"
@@ -50,6 +54,7 @@ UI_FONT = ("Microsoft YaHei UI", 10)
 
 ROOT = None
 LOG_Q = queue.Queue()
+TR = None
 STATE = {
     "view": "lib",           # lib | picks
     "items": [],             # 当前列表
@@ -72,6 +77,7 @@ STATE = {
     "picks_installed": {},
     "picks_diag": None,
     "lib_meta": {},
+    "translate": True,       # 详情里的英文自动译成中文（T 键切换）
 }
 
 
@@ -203,6 +209,7 @@ class PulseApp:
         self.root.bind("i", lambda e: self.install_selected())
         self.root.bind("o", lambda e: self.open_selected())
         self.root.bind("r", lambda e: self.refresh())
+        self.root.bind("t", lambda e: self.toggle_translate())
 
         # 右：详情
         right = tk.Frame(body, bg=PANEL, width=440)
@@ -229,6 +236,8 @@ class PulseApp:
         self.b_diag.pack(side="left", padx=8)
         self.b_open = self._btn(self.d_btns, "来源  O", self.open_selected, ghost=True)
         self.b_open.pack(side="left")
+        self.b_translate = self._btn(self.d_btns, "译文  T", self.toggle_translate, ghost=True)
+        self.b_translate.pack(side="left", padx=(8, 0))
         tk.Label(right, text="DIAGNOSTICS", bg=PANEL, fg=DIM, font=(MONO[0], 8)).pack(anchor="w", padx=16)
         self.d_diag = tk.Text(right, height=11, bg=BG2, fg=TEXT, font=(MONO[0], 9), relief="flat",
                               wrap="word", padx=10, pady=8, insertwidth=0, highlightthickness=1,
@@ -391,7 +400,11 @@ class PulseApp:
             title = it.get("name", "")
             meta = f"{it.get('category', '')}   ·   {it.get('profile', 'desktop')}   ·   {it.get('verified', '')}"
             badges = ("已安装" if it.get("installed") else "未安装") + f"   {it.get('risk', '').upper()} RISK"
-            desc = (it.get("summary") or "") + "\n\n风险： " + (it.get("riskNote") or "")
+            parts = [self._translated(it.get("summary") or "")]
+            risk = it.get("riskNote") or ""
+            if risk:
+                parts.append("风险： " + self._translated(risk))
+            desc = "\n\n".join(part for part in parts if part)
             self.b_install.configure(text="卸载  ⏎" if it.get("installed") else "安装  ⏎")
         else:
             title = it.get("name", "")
@@ -400,7 +413,7 @@ class PulseApp:
             badges = "  ".join([x for x in [it.get("statusText") or "",
                                             (it.get("trust") or "").upper(),
                                             "npm" if it.get("npm") else "GITHUB"] if x])
-            desc = it.get("desc") or "（无描述）"
+            desc = self._translated(it.get("desc") or "（无描述）")
             self.b_install.configure(text="安装  ⏎")
         self.d_title.configure(text=title)
         self.d_meta.configure(text=meta)
@@ -412,6 +425,32 @@ class PulseApp:
         widget.delete("1.0", "end")
         widget.insert("1.0", text)
         widget.configure(state="disabled")
+
+    # ---------------- 实时翻译 ----------------
+    def _translated(self, text):
+        """有缓存就显示译文；没有就触发后台翻译，先显示原文。"""
+        text = (text or "").strip()
+        if not text or TR is None or trlib is None or not STATE["translate"]:
+            return text
+        if not trlib.needs_translation(text):
+            return text
+        cached = TR.get(text)
+        if cached:
+            return cached
+        TR.request(text, self._translated_done)
+        return text + "（译中…）" if len(text) < 120 else text
+
+    def _translated_done(self):
+        LOG_Q.put(("detail", None, None))
+
+    def toggle_translate(self):
+        STATE["translate"] = not STATE["translate"]
+        try:
+            self.b_translate.configure(text="译文  T" if STATE["translate"] else "原文  T")
+        except Exception:
+            pass
+        self.draw_detail()
+        self.update_status("译文：开（英文自动译中文）" if STATE["translate"] else "译文：关（显示原文）")
 
     # ---------------- 交互 ----------------
     def switch(self, view):
@@ -644,6 +683,8 @@ class PulseApp:
                 elif kind == "redraw":
                     self.draw_list()
                     self.update_status()
+                elif kind == "detail":
+                    self.draw_detail()
         except queue.Empty:
             pass
 
@@ -763,6 +804,12 @@ def main():
     ap.add_argument("--shot-tab", default="lib", choices=["lib", "picks"])
     args = ap.parse_args()
     boot_core()
+    global TR
+    if trlib is not None:
+        try:
+            TR = trlib.Translator(core.DATA_DIR / "translate-cache.json")
+        except Exception:
+            TR = None
     root = tk.Tk()
     app = PulseApp(root)
     if args.shot_tab == "picks":

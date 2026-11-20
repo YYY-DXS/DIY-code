@@ -9,6 +9,7 @@ import { buildReport, dateInTimezone } from "./src/ranker.mjs";
 import { Notifier } from "./src/notifier.mjs";
 import { Scheduler } from "./src/scheduler.mjs";
 import { Store } from "./src/storage.mjs";
+import { Translator } from "./src/translate.mjs";
 
 const IS_SEA = isSea();
 const ROOT = IS_SEA
@@ -21,6 +22,7 @@ const LOCAL_URL = `http://${HOST}:${PORT}`;
 const BACKGROUND = process.argv.includes("--background");
 
 const store = new Store(ROOT);
+const translator = new Translator({ cacheFile: path.join(store.dataDir, "translate-cache.json") });
 const toastScriptPath = IS_SEA
   ? path.join(store.dataDir, "toast.ps1")
   : path.join(ROOT, "scripts", "toast.ps1");
@@ -36,6 +38,7 @@ const ready = store.init().then(async () => {
       "binary"
     );
   }
+  await translator.load();
 });
 
 function broadcast(type, data) {
@@ -323,6 +326,16 @@ const server = createServer(async (request, response) => {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return json(response, 400, { error: "日期无效" });
       const report = await store.getReport(date);
       return report ? json(response, 200, report) : json(response, 404, { error: "没有这一天的日报" });
+    }
+    if (url.pathname === "/api/translate" && request.method === "POST") {
+      const body = await parseBody(request);
+      const texts = Array.isArray(body.texts)
+        ? body.texts.slice(0, 60).map((value) => String(value ?? ""))
+        : [];
+      if (!texts.length) return json(response, 200, { ok: true, translations: [] });
+      const target = typeof body.to === "string" && body.to ? body.to : "zh-CN";
+      const translations = await translator.translate(texts, { to: target });
+      return json(response, 200, { ok: true, translations });
     }
     if (url.pathname === "/api/notifications/test" && request.method === "POST") {
       const config = await store.getConfig();
