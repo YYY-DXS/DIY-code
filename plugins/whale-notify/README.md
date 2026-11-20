@@ -76,7 +76,8 @@ run without touching DSH itself.
 - **Shutdown**: while armed, the next finished run shows **60 秒后关机 · 点我取消**
   and then schedules `shutdown /s /t 15`; click the countdown to cancel.
 - **State source**: the Host rewrites `state.json` on every transition and keeps
-  a 15 s heartbeat. If the heartbeat stops for 75 s (DSH closed or the plugin
+  a 15 s heartbeat, and seeds the running set from `ctx.agents.list()` when the
+  plugin loads, so a reload during a run is not mistaken for idle. If the heartbeat stops for 75 s (DSH closed or the plugin
   disabled) the chip turns **离线** instead of freezing on the last pose.
   Refreshing the web page does not affect this window: it follows that file.
 - Voice: ten pre-synthesised lines (see `assets/voice`) — one short line per state

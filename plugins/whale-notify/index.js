@@ -67,6 +67,20 @@ export function apply(ctx) {
     }
   }
 
+  // A freshly loaded Host knows nothing about in-flight work: seed the set from
+  // the live agents so a reload during a run does not look idle.
+  try {
+    const agents = ctx.get('agents')
+    if (agents !== undefined) {
+      for (const agent of agents.list()) {
+        if (agent.status === 'running') running.add(agent.session.id)
+      }
+    }
+  } catch (error) {
+    hostLog(`cannot seed running sessions: ${error && error.message ? error.message : String(error)}`)
+  }
+  if (running.size > 0) phase = 'running'
+
   // Start from a readable state so a freshly started widget is not blank.
   writeState()
 
