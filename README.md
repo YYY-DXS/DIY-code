@@ -86,6 +86,21 @@ git push
 
 不想敲命令的话，双击 `tools\同步仓库.cmd`，它会自动拉取最新、提交本地改动并推送。
 
+## 代码签名
+
+Windows 可执行文件由 CI 从源码构建，脚本是 [`tools/build/build-binaries.ps1`](tools/build/build-binaries.ps1)，
+构建记录见 Actions 的 **Build binaries**，产物是 artifact `binaries-<版本>`。
+
+**当前状态：尚未签名。** 首次运行会出现上文所说的 SmartScreen 提示，请用 `SHA256SUMS.txt` 核对完整性。
+
+Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org).
+
+- Committers and reviewers: [@YYY-DXS](https://github.com/YYY-DXS)
+- Approvers: [@YYY-DXS](https://github.com/YYY-DXS)
+- Privacy policy: 不收集遥测，不上传任何使用数据。联网只发生在你主动使用的功能上——天气与 AQI、DeepSeek 余额查询、科技新闻抓取、在线翻译；API Key 与历史记录仅保存在本机（`config.json`、`data/`），不会进入仓库。
+
+> SignPath Foundation 的申请状态见 [docs/code-signing.md](docs/code-signing.md)。审批通过前，上述签名政策尚未生效。
+
 ## 许可
 
 本项目采用 [MIT 许可](LICENSE)：任何人都可以自由使用、修改、再发布，
