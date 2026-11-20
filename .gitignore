@@ -33,3 +33,10 @@ knowledge/
 
 # 科技脉冲打包输出
 apps/TechPulse/
+
+# 构建产物：PyInstaller 的 build/dist、打包出来的 release 目录
+dist/
+build/
+*.spec
+apps/*/release/
+plugins/*/release/

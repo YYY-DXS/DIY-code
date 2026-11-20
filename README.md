@@ -2,11 +2,29 @@
 
 个人 DIY 项目、自制 Windows 工具与 DeepSeek Harness 插件仓库。
 
+[![Release](https://img.shields.io/github/v/release/YYY-DXS/DIY-code?display_name=tag&sort=semver)](https://github.com/YYY-DXS/DIY-code/releases)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![Publish apps](https://github.com/YYY-DXS/DIY-code/actions/workflows/release.yml/badge.svg)](https://github.com/YYY-DXS/DIY-code/actions/workflows/release.yml)
+
 ## 下载
 
 最新发行版：[v2.0.8](https://github.com/YYY-DXS/DIY-code/releases/tag/v2.0.8)
 
 每个软件一个 zip，解压即用；`SHA256SUMS.txt` 可核对下载完整性。
+
+## 首次运行提示
+
+解压后运行 exe，Windows 可能弹出「Windows 已保护你的电脑」。**这不是报毒**：本项目没有购买商业代码签名证书，
+SmartScreen 对「未知发布者 + 新文件」一律拦截。
+
+确认来源后，任选一种通过：
+
+1. 点弹窗里的 **更多信息** → **仍要运行**
+2. 右键 exe → **属性** → 勾选 **解除锁定** → 确定
+3. PowerShell：`Unblock-File .\程序.exe`
+
+更稳妥的做法是先核对哈希：`Get-FileHash .\xxx.zip -Algorithm SHA256`，与 Release 里的 `SHA256SUMS.txt` 对比。
+签名机制与后续方案见 [docs/首次运行与签名.md](docs/首次运行与签名.md)。
 
 ## 目录
 
@@ -17,6 +35,7 @@
 | [`extras/`](extras/README.md) | 单独发布的生成器与脚本（高中政治思维导图） |
 | [`projects/`](projects/README.md) | 各个 DIY 项目的资料（齐柏林飞艇、外骨骼、台历、航模方向） |
 | [`tools/`](tools/README.md) | 配套工具：DeepSeek 记录同步、Git 同步、隐私检查、Markdown 转换 |
+| [`docs/`](docs/) | 首次运行提示、代码签名方案与发布检查清单 |
 
 ## 本次 v2.0.8 收录
 
