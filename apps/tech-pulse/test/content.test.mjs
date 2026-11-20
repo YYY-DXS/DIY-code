@@ -5,6 +5,7 @@ import {
   extractWebPageContent,
   isSafeMediaFilename
 } from "../src/content.mjs";
+import { stripHtml } from "../src/collectors.mjs";
 import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -80,4 +81,15 @@ test("cached page content remains readable when the external site is unavailable
     assert.ok(cacheDir.startsWith(expectedPrefix));
     await rm(cacheDir, { recursive: true, force: true });
   }
+});
+
+test("HTML sanitizer removes script/style blocks without regex tag filtering", () => {
+  assert.equal(
+    stripHtml(
+      '<p>keep</p><script type="text/javascript">alert(1)</script><style>p{}</style><SCRIPT >bad</SCRIPT >'
+    ),
+    "keep"
+  );
+  assert.equal(stripHtml("<p>before</p><script>unclosed <p>hidden</p>"), "before");
+  assert.equal(stripHtml("<p>2 &lt; 3 and 4 &gt; 1</p>"), "2 < 3 and 4 > 1");
 });
