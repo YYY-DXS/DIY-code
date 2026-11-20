@@ -1,10 +1,10 @@
-# 代码签名（Code signing）
+﻿# 代码签名（Code signing）
 
 ## 现状
 
 | 项 | 状态 |
 | --- | --- |
-| 从源码可验证构建 | ✅ `.github/workflows/build-binaries.yml` → `tools/build/build-binaries.ps1` |
+| 从源码可验证构建 | ✅ 已跑通（[run #3](https://github.com/YYY-DXS/DIY-code/actions/runs/44741506489)，artifact `binaries-main`，3 个 exe） |
 | 产物带产品名/版本元数据 | ✅ 构建脚本会校验，缺元数据直接失败 |
 | 公共 CA 证书签名 | ❌ 未签名，因此有 SmartScreen 提示 |
 | SignPath Foundation 申请 | ⏳ 未提交（需要仓库有一定曝光量后再申请，见下） |

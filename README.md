@@ -5,6 +5,7 @@
 [![Release](https://img.shields.io/github/v/release/YYY-DXS/DIY-code?display_name=tag&sort=semver)](https://github.com/YYY-DXS/DIY-code/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![Publish apps](https://github.com/YYY-DXS/DIY-code/actions/workflows/release.yml/badge.svg)](https://github.com/YYY-DXS/DIY-code/actions/workflows/release.yml)
+[![Build binaries](https://github.com/YYY-DXS/DIY-code/actions/workflows/build-binaries.yml/badge.svg)](https://github.com/YYY-DXS/DIY-code/actions/workflows/build-binaries.yml)
 
 ## 下载
 
