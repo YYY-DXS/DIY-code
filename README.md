@@ -21,7 +21,7 @@
 
 <img src="plugins/whale-notify/assets/anim/running.png" width="120" align="right" alt="鲸鱼娘桌宠">
 
-最新发行版：[v2.2.3](https://github.com/YYY-DXS/DIY-code/releases/tag/v2.2.3)
+最新发行版：[v2.2.4](https://github.com/YYY-DXS/DIY-code/releases/tag/v2.2.4)
 
 ## 快速开始
 

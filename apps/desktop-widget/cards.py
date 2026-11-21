@@ -1260,6 +1260,7 @@ class ExtraHub:
         self._volume_lock = threading.Lock()
         self.media_proc = None
         self._media_lock = threading.Lock()
+        self._pending_action = None
         self.media_file = os.path.join(W.APP_DIR, "assets", "media-state.json")
         # 歌词：按「歌名|歌手」缓存，切歌时后台拉一次
         self.lyrics = {}
@@ -1385,6 +1386,7 @@ class ExtraHub:
     def _media_loop(self, on_change):
         while not self._stop.is_set():
             try:
+                self._run_pending_action(on_change)
                 before = self.media
                 self._refresh_media()
                 current = self.media or {}
@@ -1493,33 +1495,94 @@ class ExtraHub:
             proc.kill()
 
     def media_action(self, action: str):
-        threading.Thread(
-            target=lambda: asyncio.run(self._media_control(action)),
-            daemon=True
-        ).start()
+        """把控制请求交给媒体轮询线程串行执行。
+
+        每个点击都新开线程 asyncio.run 的话，会和 1 秒一次的读取抢 GSMTC，
+        偶发 RPC_E_CALL_CANCELED（消息筛选器取消了调用）；串行化最稳。
+        """
+        with self._media_lock:
+            self._pending_action = action
+
+    def _media_key(self, action: str) -> None:
+        """发系统媒体键：QQMusic 这类播放器会忽略 SMTC 的 TryPlay，但吃媒体键。"""
+        vk = {"next": 0xB0, "prev": 0xB1}.get(action, 0xB3)
+        _user32.keybd_event(vk, 0, 0, 0)
+        time.sleep(0.05)
+        _user32.keybd_event(vk, 0, 2, 0)
+
+    def _media_sig(self):
+        try:
+            state = self.media or {}
+        except Exception:
+            return None
+        return (state.get("title"), state.get("artist"), state.get("status"))
+
+    def _run_pending_action(self, on_change) -> None:
+        with self._media_lock:
+            action = self._pending_action
+            self._pending_action = None
+        if not action:
+            return
+        before = self._media_sig()
+        try:
+            self._media_key(action)
+            # QQMusic 这类播放器响应媒体键要 1 秒左右，等够再判断
+            time.sleep(1.2)
+            self._refresh_media()
+            if on_change:
+                on_change()
+            if self._media_sig() != before:
+                return
+        except Exception as exc:
+            W.log(f"[media] 媒体键失败: {exc!r}")
+        try:
+            asyncio.run(self._media_control(action))
+            time.sleep(0.6)
+            self._refresh_media()
+            if on_change:
+                on_change()
+        except Exception as exc:
+            W.log(f"[media] 进程内控制失败: {exc!r}")
+
+    def _media_action_bridge(self, action: str, on_change=None) -> None:
+        mapping = {"next": "next", "prev": "previous", "play": "playpause"}
+        flag = mapping.get(action, "playpause")
+        script = os.path.join(W.APP_DIR, "assets", "MediaControl.ps1")
+        if not os.path.exists(script):
+            return
+        powershell = os.path.join(
+            os.environ.get("SystemRoot", r"C:\Windows"),
+            "System32", "WindowsPowerShell", "v1.0", "powershell.exe"
+        )
+        try:
+            subprocess.run(
+                [powershell, "-NoProfile", "-ExecutionPolicy", "Bypass",
+                 "-File", script, "-Action", flag],
+                stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL, creationflags=0x08000000,
+                timeout=45
+            )
+            self._refresh_media()
+            if on_change:
+                on_change()
+        except Exception as exc:
+            W.log(f"[media] 桥接控制失败: {exc!r}")
 
     async def _media_control(self, action: str):
-        try:
-            from winrt.windows.media.control import (
-                GlobalSystemMediaTransportControlsSessionManager as Manager
-            )
-        except Exception as exc:
-            W.log(f"[media] winrt 不可用: {exc!r}")
-            return
-        try:
-            manager = await Manager.request_async()
-            sessions = list(manager.get_sessions())
-            if not sessions:
-                return
-            session = sessions[0]
-            if action == "next":
-                await session.try_skip_next_async()
-            elif action == "prev":
-                await session.try_skip_previous_async()
-            else:
-                await session.try_toggle_play_pause_async()
-        except Exception as exc:
-            W.log(f"[media] control failed: {exc!r}")
+        from winrt.windows.media.control import (
+            GlobalSystemMediaTransportControlsSessionManager as Manager
+        )
+        manager = await Manager.request_async()
+        sessions = list(manager.get_sessions())
+        if not sessions:
+            raise RuntimeError("没有可控制的媒体会话")
+        session = sessions[0]
+        if action == "next":
+            await session.try_skip_next_async()
+        elif action == "prev":
+            await session.try_skip_previous_async()
+        else:
+            await session.try_toggle_play_pause_async()
 
     async def _read_media(self) -> dict:
         try:
