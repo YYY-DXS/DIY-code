@@ -35,8 +35,9 @@ $script:left = 0
 $script:shutdownTimer = $null
 $script:lastStateAt = [datetime]::MinValue
 $script:statePhase = 'idle'
+$script:lastChange = Get-Date
 $script:player = New-Object System.Windows.Media.MediaPlayer
-$script:player.Volume = 0.9
+$script:player.Volume = 0.35
 $script:notify = $null
 
 function Read-Config {
@@ -209,11 +210,13 @@ function Set-Phase([string]$next) {
   $chip.Text = $labels[$next]
   $dot.Fill = $dots[$next]
   Update-NotifyText $next
-  switch ($next) {
-    'running' { Speak (Pick-Voice @('running-1.mp3', 'running-2.mp3')) }
-    'waiting' { Speak 'approval.mp3' }
-    'done' { Speak (Pick-Voice @('done-1.mp3', 'done-2.mp3')) }
-    'error' { Speak 'sad.mp3' }
+  $now = Get-Date
+  $idleMinutes = ($now - $script:lastChange).TotalMinutes
+  $script:lastChange = $now
+  # 只有“好久不用、又开始干活”时才说话；其余状态切换保持安静
+  if ($next -eq 'running' -and $idleMinutes -gt 30) {
+    Log ("resume after {0:N0} min idle -> speak" -f $idleMinutes)
+    Speak (Pick-Voice @('welcome.mp3', 'chat-1.mp3', 'chat-2.mp3'))
   }
   if ($next -eq 'done' -and $script:armed) { Start-Countdown }
   if ($next -eq 'running') { Stop-Countdown }
@@ -336,14 +339,22 @@ $beat.Interval = [TimeSpan]::FromSeconds(2)
 $beat.Add_Tick({ Set-Phase (EffectivePhase) })
 $beat.Start()
 
-$chatter = New-Object System.Windows.Threading.DispatcherTimer
-$chatter.Interval = [TimeSpan]::FromMinutes(10)
-$chatter.Add_Tick({
-  if ($script:phase -eq 'idle' -or $script:phase -eq 'running') {
-    Speak (Pick-Voice @('chat-1.mp3', 'chat-2.mp3'))
-  }
-})
-$chatter.Start()
+# 不再定时嘟囔：声音只留给开机与久别重逢
 
 Log 'showing'
+$script:bootGreet = New-Object System.Windows.Threading.DispatcherTimer
+$script:bootGreet.Interval = [TimeSpan]::FromSeconds(3)
+$script:bootGreet.Add_Tick({
+  $script:bootGreet.Stop()
+  # Windows PowerShell 5.1 没有 TickCount64，用 32 位 TickCount；读不到就不打招呼
+  $ticks = $null
+  try { $ticks = [Environment]::TickCount } catch { $ticks = $null }
+  if ($ticks -ne $null -and ([TimeSpan]::FromMilliseconds([double]$ticks)).TotalMinutes -lt 10) {
+    Log 'boot -> speak welcome'
+    Speak 'welcome.mp3'
+  } else {
+    Log 'no boot greeting (machine has been up a while)'
+  }
+})
+$script:bootGreet.Start()
 $window.ShowDialog() | Out-Null

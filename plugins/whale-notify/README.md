@@ -80,8 +80,10 @@ run without touching DSH itself.
   plugin loads, so a reload during a run is not mistaken for idle. If the heartbeat stops for 75 s (DSH closed or the plugin
   disabled) the chip turns **离线** instead of freezing on the last pose.
   Refreshing the web page does not affect this window: it follows that file.
-- Voice: ten pre-synthesised lines (see `assets/voice`) — one short line per state
-  change, plus a random line every ten minutes while idle or running.
+- Voice: ten pre-synthesised lines (see `assets/voice`), played at **35% volume**
+  and only twice: a greeting when the widget starts within ten minutes of a
+  machine boot, and a greeting when work resumes after more than 30 minutes of
+  silence. Ordinary state changes are silent.
 - The Host half starts this process when the plugin activates, so a freshly
   installed or edited bundle needs **one DSH restart** to take over spawning.
   Disabling the plugin closes the window and cancels a pending shutdown.
