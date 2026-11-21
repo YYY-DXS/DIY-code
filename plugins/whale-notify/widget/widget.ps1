@@ -1,6 +1,8 @@
 ﻿param(
   [Parameter(Mandatory = $true)][string]$StatePath,
-  [Parameter(Mandatory = $true)][string]$AssetsDir
+  [Parameter(Mandatory = $true)][string]$AssetsDir,
+  [string]$TtsPython = '',
+  [string]$TtsScript = ''
 )
 
 # 鲸鱼娘桌面挂件：无边框透明置顶窗 + 系统托盘图标。
@@ -35,6 +37,8 @@ $script:muted = $false
 $script:fed = 0
 $script:patCount = 0
 $script:clickTimer = $null
+$script:ttsPath = ''
+$script:ttsTimer = $null
 $script:left = 0
 $script:shutdownTimer = $null
 $script:lastStateAt = [datetime]::MinValue
@@ -82,15 +86,21 @@ function Brush([int]$r, [int]$g, [int]$b) {
       <RowDefinition Height="*"/>
       <RowDefinition Height="Auto"/>
       <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
     </Grid.RowDefinitions>
     <Image x:Name="Still" Grid.Row="0" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"/>
-    <Border Grid.Row="1" HorizontalAlignment="Center" Background="#F2FFFFFF" CornerRadius="10" Padding="8,3" Margin="0,2,0,0">
+    <Border x:Name="Bubble" Grid.Row="1" Visibility="Collapsed" HorizontalAlignment="Center" Margin="8,2,8,0"
+            Padding="8,4" Background="#F2FFFFFF" CornerRadius="10" MaxWidth="200">
+      <TextBlock x:Name="BubbleText" FontSize="11" FontFamily="Microsoft YaHei" Foreground="#2C3A4A"
+                 TextWrapping="Wrap" TextAlignment="Center" Text=""/>
+    </Border>
+    <Border Grid.Row="2" HorizontalAlignment="Center" Background="#F2FFFFFF" CornerRadius="10" Padding="8,3" Margin="0,2,0,0">
       <StackPanel Orientation="Horizontal">
         <Ellipse x:Name="Dot" Width="6" Height="6" Fill="#C9CCD1" Margin="0,0,5,0" VerticalAlignment="Center"/>
         <TextBlock x:Name="Chip" FontSize="11" Foreground="#3A4654" Text="空闲" VerticalAlignment="Center" FontFamily="Microsoft YaHei"/>
       </StackPanel>
     </Border>
-    <TextBlock x:Name="Countdown" Grid.Row="2" Visibility="Collapsed" HorizontalAlignment="Center"
+    <TextBlock x:Name="Countdown" Grid.Row="3" Visibility="Collapsed" HorizontalAlignment="Center"
                FontSize="11" Foreground="#D9534F" Margin="0,2,0,4" Cursor="Hand"
                FontFamily="Microsoft YaHei" Text=""/>
   </Grid>
@@ -103,6 +113,14 @@ $still = $window.FindName('Still')
 $dot = $window.FindName('Dot')
 $chip = $window.FindName('Chip')
 $countdown = $window.FindName('Countdown')
+$bubble = $window.FindName('Bubble')
+$bubbleText = $window.FindName('BubbleText')
+$requestPath = Join-Path $scriptDir 'request.json'
+$script:lastSeq = -1
+$script:basePhase = 'idle'
+$script:expression = ''
+$script:expressionUntil = [datetime]::MinValue
+$script:bubbleTimer = $null
 
 $poses = @{
   idle = Load-Image (Join-Path $AssetsDir 'anim\idle.png')
@@ -111,6 +129,12 @@ $poses = @{
   done = Load-Image (Join-Path $AssetsDir 'anim\done.png')
   error = Load-Image (Join-Path $AssetsDir 'anim\waiting.png')
   offline = Load-Image (Join-Path $AssetsDir 'anim\idle.png')
+  cheer = Load-Image (Join-Path $AssetsDir 'anim\cheer.png')
+  tired = Load-Image (Join-Path $AssetsDir 'anim\tired.png')
+  sweat = Load-Image (Join-Path $AssetsDir 'anim\sweat.png')
+  worried = Load-Image (Join-Path $AssetsDir 'anim\worried.png')
+  denied = Load-Image (Join-Path $AssetsDir 'anim\denied.png')
+  coding = Load-Image (Join-Path $AssetsDir 'anim\coding.png')
 }
 
 $labels = @{ idle = '空闲'; running = '运行中'; waiting = '等你回复'; done = '刚完成'; error = '出错了'; offline = '离线' }
@@ -175,11 +199,83 @@ function SayFeed {
   Save-Config
   Update-FeedMenu
   Speak (Pick-Voice @('feed-1.mp3', 'feed-2.mp3'))
+  Send-Request 'feed'
 }
 
 function Update-FeedMenu {
   if ($script:feedItem -eq $null) { return }
   try { $script:feedItem.Text = ("喂小鱼干（已喂 {0} 条）" -f $script:fed) } catch { }
+}
+
+function Send-Request([string]$kind) {
+  try {
+    $json = @{ kind = $kind; at = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() } | ConvertTo-Json -Compress
+    [System.IO.File]::WriteAllText($requestPath, $json, (New-Object System.Text.UTF8Encoding($false)))
+  } catch { }
+}
+
+function Show-Bubble([string]$line, [string]$summary) {
+  if ($bubble -eq $null) { return }
+  $text = $line
+  if ($summary) { $text = $line + "`n" + $summary }
+  $bubbleText.Text = $text
+  $bubble.Visibility = [System.Windows.Visibility]::Visible
+  if ($script:bubbleTimer -ne $null) { $script:bubbleTimer.Stop() }
+  $script:bubbleTimer = New-Object System.Windows.Threading.DispatcherTimer
+  $script:bubbleTimer.Interval = [TimeSpan]::FromSeconds(9)
+  $script:bubbleTimer.Add_Tick({
+    $script:bubbleTimer.Stop()
+    $bubble.Visibility = [System.Windows.Visibility]::Collapsed
+  })
+  $script:bubbleTimer.Start()
+}
+
+function Play-Path([string]$path) {
+  try {
+    Log "speak file"
+    $script:player.Open((New-Object System.Uri $path))
+    $script:player.Play()
+  } catch { }
+}
+
+function Speak-Generated([string]$text, [string]$path) {
+  if (-not $path) { return }
+  if ($script:muted) { Log 'muted, skip generated line'; return }
+  if (Test-Path $path) { Play-Path $path; return }
+  if ($TtsPython -eq '' -or $TtsScript -eq '' -or -not (Test-Path $TtsPython)) {
+    Log 'no tts toolchain'
+    return
+  }
+  try {
+    Start-Process -FilePath $TtsPython -ArgumentList @($TtsScript, '--text', $text, '--out', $path, '--voice', 'zh-CN-XiaoyiNeural') -WindowStyle Hidden | Out-Null
+    Log 'tts spawned'
+  } catch {
+    Log ('tts spawn failed: ' + $_.Exception.Message)
+    return
+  }
+  $script:ttsPath = $path
+  if ($script:ttsTimer -eq $null) {
+    $script:ttsTimer = New-Object System.Windows.Threading.DispatcherTimer
+    $script:ttsTimer.Interval = [TimeSpan]::FromMilliseconds(600)
+    $script:ttsTimer.Add_Tick({
+      $p = $script:ttsPath
+      if ($p -and (Test-Path $p)) {
+        $script:ttsTimer.Stop()
+        $script:ttsTimer = $null
+        $script:ttsPath = ''
+        Play-Path $p
+      }
+    })
+    $script:ttsTimer.Start()
+  }
+}
+
+function Refresh-Pose {
+  if ($script:expression -ne '' -and (Get-Date) -lt $script:expressionUntil -and $poses[$script:expression] -ne $null) {
+    $still.Source = $poses[$script:expression]
+    return
+  }
+  if ($poses[$script:basePhase] -ne $null) { $still.Source = $poses[$script:basePhase] }
 }
 
 function Speak([string]$name) {
@@ -250,7 +346,8 @@ function Set-Phase([string]$next) {
   if ($script:phase -eq $next) { return }
   $script:phase = $next
   Log "phase -> $next"
-  if ($poses[$next] -ne $null) { $still.Source = $poses[$next] }
+  $script:basePhase = $next
+  Refresh-Pose
   $chip.Text = $labels[$next]
   $dot.Fill = $dots[$next]
   Update-NotifyText $next
@@ -282,7 +379,7 @@ function EffectivePhase {
 function Poll-State {
   if (-not (Test-Path $StatePath)) { return }
   try {
-    $raw = Get-Content -LiteralPath $StatePath -Raw -ErrorAction Stop
+    $raw = [System.IO.File]::ReadAllText($StatePath, [System.Text.Encoding]::UTF8)
     if (-not $raw) { return }
     $state = $raw | ConvertFrom-Json
     if ($state.at) {
@@ -291,6 +388,16 @@ function Poll-State {
       $script:lastStateAt = (Get-Item $StatePath).LastWriteTime
     }
     if ($state.phase) { $script:statePhase = $state.phase }
+    if ($state.seq -ne $null -and [int]$state.seq -ne $script:lastSeq) {
+      $script:lastSeq = [int]$state.seq
+      if ($state.line) {
+        Show-Bubble ([string]$state.line) ([string]$state.summary)
+        $script:expression = [string]$state.expression
+        $script:expressionUntil = (Get-Date).AddSeconds(8)
+        Refresh-Pose
+        if ($state.voice) { Speak-Generated ([string]$state.line) ([string]$state.voice) }
+      }
+    }
     Set-Phase (EffectivePhase)
   } catch { }
 }
@@ -412,11 +519,13 @@ $still.Add_MouseLeftButtonUp({
   if ($drag -eq $null) { return }
   $script:windowLeft = $window.Left
   $script:windowTop = $window.Top
+  Log "click count=$($eventArgs.ClickCount) moved=$($drag.moved)"
   if ($drag.moved) { Save-Config; return }
   if ($eventArgs.ClickCount -ge 2) {
     # double click: cancel the pending pat, say a line instead
     if ($script:clickTimer -ne $null) { $script:clickTimer.Stop(); $script:clickTimer = $null }
     SayTalk
+    Send-Request 'talk'
     return
   }
   # single click: wait briefly so a double click does not pat first
@@ -427,11 +536,37 @@ $still.Add_MouseLeftButtonUp({
     $script:clickTimer.Stop()
     $script:clickTimer = $null
     SayPat
+    Send-Request 'pat'
   })
   $script:clickTimer.Start()
 })
 $still.ToolTip = '单击：摸摸头 / 双击：说一句话 / 右键托盘：更多'
 $window.Add_LocationChanged({ $script:windowLeft = $window.Left; $script:windowTop = $window.Top })
+$still.Add_MouseRightButtonUp({ Log 'right click' })
+$ctx = New-Object System.Windows.Controls.ContextMenu
+$miTalk = New-Object System.Windows.Controls.MenuItem
+$miTalk.Header = '说一句'
+$miTalk.Add_Click({ Send-Request 'talk' })
+$miFeed = New-Object System.Windows.Controls.MenuItem
+$miFeed.Header = '喂鱼干'
+$miFeed.Add_Click({ SayFeed })
+$miMood = New-Object System.Windows.Controls.MenuItem
+$miMood.Header = '看看心情'
+$miMood.Add_Click({ Send-Request 'mood' })
+$miHide = New-Object System.Windows.Controls.MenuItem
+$miHide.Header = '隐藏'
+$miHide.Add_Click({ $window.Hide() })
+$miQuit = New-Object System.Windows.Controls.MenuItem
+$miQuit.Header = '退出'
+$miQuit.Add_Click({ $window.Close() })
+foreach ($mi in @($miTalk, $miFeed, $miMood, $miHide, $miQuit)) { [void]$ctx.Items.Add($mi) }
+$still.ContextMenu = $ctx
+
+$poseTick = New-Object System.Windows.Threading.DispatcherTimer
+$poseTick.Interval = [TimeSpan]::FromSeconds(1)
+$poseTick.Add_Tick({ Refresh-Pose })
+$poseTick.Start()
+
 $window.Add_Closed({
   Save-Config
   Stop-Countdown

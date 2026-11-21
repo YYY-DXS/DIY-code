@@ -96,6 +96,20 @@ run without touching DSH itself.
 The script requires Windows PowerShell (present on every Windows install) and
 desktop WPF; no extra dependency, no DSH patching.
 
+## Generated lines and mood
+
+The Host half keeps a small mood model (mood / affinity / satiety, persisted in
+`%TEMP%\\dsh-whale-pet\\mood.json`) and asks the profile's configured model through
+`ctx.llm` for one persona line whenever a run finishes, fails, or the user clicks
+her. The reply is parsed leniently (a truncated JSON still yields its `line` and
+`expression`) and published to `state.json`; the widget shows it in a speech
+bubble, switches to the matching pose (`cheer`, `tired`, `worried`, `denied`,
+`thinking`), and asks the shared `tools/tts.py` to synthesise the line on the fly.
+
+Right-click the character for a small menu (说一句 / 喂鱼干 / 看看心情 / 隐藏 /
+退出); the tray menu carries the same actions. Single-click pats her, double-click
+asks for a spoken line.
+
 ## How it knows
 
 The Web client already keeps one status snapshot per Session for the sidebar:
