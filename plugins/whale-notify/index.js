@@ -335,6 +335,29 @@ export function apply(ctx) {
   if (running.size > 0) phase = 'running'
   writeState()
 
+  // One-shot network probe: can this Host process reach the internet at all?
+  const probeNetwork = async () => {
+    const result = { at: new Date().toISOString(), targets: {} }
+    for (const url of ['https://pypi.org/', 'https://speech.platform.bing.com/']) {
+      try {
+        const controller = new AbortController()
+        const timer = setTimeout(() => controller.abort(), 8000)
+        const response = await fetch(url, { method: 'HEAD', signal: controller.signal })
+        clearTimeout(timer)
+        result.targets[url] = `http ${response.status}`
+      } catch (error) {
+        result.targets[url] = `fail: ${error && error.message ? error.message : String(error)}`
+      }
+    }
+    try {
+      writeFileSync(join(STATE_DIR, 'host-probe.json'), JSON.stringify(result, null, 2), 'utf8')
+    } catch (error) {
+      // Probe output is best effort.
+    }
+    hostLog(`network probe: ${JSON.stringify(result.targets)}`)
+  }
+  void probeNetwork()
+
   const scriptPath = join(HERE, 'widget', 'widget.ps1')
   const assets = join(HERE, 'assets')
   const shell = join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe')
