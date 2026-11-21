@@ -638,7 +638,7 @@ def qweather_key(cfg: dict) -> str:
 # --------------------------------------------------------------------------
 
 # 版面：上面并排两张正方形卡片，下面一张通栏卡片 —— 整体接近正方形
-CANVAS_W, CANVAS_H = 420, 396
+CANVAS_W, CANVAS_H = 420, 360
 SHADOW = 18
 RADIUS = 34                 # 圆角，越大越圆润
 RESIZE_ZONE = 26            # 右下角多少像素内算「缩放把手」
@@ -647,7 +647,7 @@ COMPACT_BELOW = 0.85        # 有效缩放低于这个值就切「精简模式�
 
 CARD_WEATHER = (0, 0, 204, 188)
 CARD_BALANCE = (216, 0, 204, 188)
-CARD_SYSTEM = (0, 200, 420, 196)
+CARD_SYSTEM = (0, 200, 420, 160)
 BUTTON_ORIGIN = (260, 366)
 
 BG_TOP = (44, 46, 56)
@@ -1732,6 +1732,14 @@ def render(state: dict, scale: float, opacity: float, hover, clickthrough: bool,
     dl.text(P(wx + 18, wy + 30), state.get("city", "杭州"), font=f(15), fill=FG, anchor="lm")
     dl.text(P(wx + 186, wy + 30), datetime.now().strftime("%H:%M"), font=f(12),
             fill=FG_DIM, anchor="rm")
+    # 数据来源与实况时间从系统卡搬到这里，跟天气放在一起才讲得通
+    weather_source = state.get("weather_source") or state.get("source") or ""
+    observe_time = state.get("obs_time")
+    if weather_source:
+        dl.text(P(wx + 18, wy + 47), weather_source, font=f(8), fill=FG_FAINT, anchor="lm")
+    if observe_time and not compact:
+        dl.text(P(wx + 186, wy + 47), f"实况 {observe_time}", font=f(8),
+                fill=FG_FAINT, anchor="rm")
     dl.text(P(wx + 18, wy + (94 if compact else 84)),
             "—" if state.get("temp") is None else f"{state['temp']}°",
             font=f(48 if compact else 42), fill=FG, anchor="lm")
@@ -1742,7 +1750,10 @@ def render(state: dict, scale: float, opacity: float, hover, clickthrough: bool,
         img = draw_weather_icon(img, *P(wx + 150, wy + (88 if compact else 80)),
                                 (46 if compact else 40) * scale, kind)
         dl = ImageDraw.Draw(img, "RGBA")
-    dl.text(P(wx + 18, wy + (140 if compact else 122)), state.get("desc", ""),
+    desc_text = state.get("desc", "")
+    if compact and observe_time:
+        desc_text = f"{desc_text} · 实况 {observe_time}" if desc_text else f"实况 {observe_time}"
+    dl.text(P(wx + 18, wy + (140 if compact else 122)), desc_text,
             font=f(14 if compact else 13), fill=FG, anchor="lm")
     low_line = wy + (170 if compact else 148)
     if state.get("temp_max") is not None and state.get("temp_min") is not None:
@@ -1849,12 +1860,10 @@ def render(state: dict, scale: float, opacity: float, hover, clickthrough: bool,
             dl.text(P(center, cy0 + 142), extra, font=f(9),
                     fill=(104, 110, 124), anchor="mm")
 
-    # 左下角：实况时间 + 数据来源（有提示时让位给提示）
-    obs = state.get("obs_time")
-    stamp = f"实况 {obs}" if obs else f"更新 {state.get('updated') or '—'}"
-    source = state.get("weather_source") or state.get("source") or ""
-    dl.text(P(cx0 + 18, cy0 + 178), hint or (f"{stamp} · {source}" if source else stamp),
-            font=f(9), fill=WARN if hint else FG_FAINT, anchor="lm")
+    # 系统卡不再显示实况时间/天气来源（已搬到天气卡），也不放操作按钮；
+    # 只有临时提示（锁定、重置之类）还需要一行位置。
+    if hint:
+        dl.text(P(cx0 + 18, cy0 + 150), hint, font=f(9), fill=WARN, anchor="lm")
 
     # 右下角缩放把手：三道斜线，一看就知道能拖（小块贴图，不做整画布合成）
     def build_grip():
@@ -1875,21 +1884,9 @@ def render(state: dict, scale: float, opacity: float, hover, clickthrough: bool,
     dl = ImageDraw.Draw(img, "RGBA")
 
     # ================= 按钮 =================
+    # 系统卡的操作按钮已去掉：刷新/退出/透明度等都在托盘菜单里，
+    # 卡片本身保持纯展示，避免误点。
     buttons = {}
-    bsize, gap = 22, 8
-    names = ["refresh", "opacity", "desktop", "clickthrough", "close"]
-    x, y0 = BUTTON_ORIGIN
-    for name in names:
-        rect = (x, y0, x + bsize, y0 + bsize)
-        active = (name == "desktop" and desktop_layer) or (name == "clickthrough" and clickthrough)
-        if name == hover or active:
-            img = layer(img, lambda d, r=rect, a=active: d.rounded_rectangle(
-                (*P(r[0], r[1]), *P(r[2], r[3])), radius=int(7 * scale),
-                fill=(255, 255, 255, 66 if a else 34)))
-        img = draw_icon_glyph(img, *P(rect[0] + bsize / 2, rect[1] + bsize / 2),
-                              bsize * scale, name, alpha=255 if active else 200)
-        buttons[name] = rect
-        x += bsize + gap
 
     dl = ImageDraw.Draw(img, "RGBA")
 

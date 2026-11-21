@@ -21,6 +21,7 @@ import sys
 import threading
 import time
 import traceback
+import urllib.parse
 import urllib.request
 from ctypes import wintypes as wt
 
@@ -275,6 +276,25 @@ def render_music(app, w: int, h: int, scale: float):
     d.text((m + 14 * scale, m + 92 * scale),
            {"Playing": "正在播放", "Paused": "已暂停"}.get(status, status or ""),
            font=W.font(max(7, 9 * scale)), fill=W.GOOD if status == "Playing" else W.FG_FAINT)
+    # 歌词：当前行亮色，下一行淡色；没有歌词时给一句状态，不占额外空间
+    if title:
+        try:
+            current_line, next_line = app.extra.lyric_pair(st.get("position"))
+        except Exception:
+            current_line, next_line = "", ""
+        if current_line:
+            d.text((m + 14 * scale, m + 108 * scale),
+                   _ellipsis(d, current_line, W.font(max(7, 10 * scale)), w - 28 * scale),
+                   font=W.font(max(7, 10 * scale)), fill=W.FG)
+            if next_line:
+                d.text((m + 14 * scale, m + 128 * scale),
+                       _ellipsis(d, next_line, W.font(max(7, 8 * scale)), w - 28 * scale),
+                       font=W.font(max(7, 8 * scale)), fill=W.FG_FAINT)
+        else:
+            loading = bool(getattr(app.extra, "lyric_loading", False))
+            d.text((m + 14 * scale, m + 110 * scale),
+                   "歌词加载中…" if loading else "暂无歌词",
+                   font=W.font(max(7, 8 * scale)), fill=W.FG_FAINT)
     by = m + h - 42 * scale
     _small_button(img, d, (m + 14 * scale, by, m + 66 * scale, by + 26 * scale),
                   "<<", "media_prev", buttons)
@@ -1155,9 +1175,72 @@ def _parse_ics_events(text: str, days: int = 7) -> list[dict]:
     return result
 
 
+_LRC_RE = re.compile(r"\[(\d{1,2}):(\d{1,2})(?:[.:](\d{1,3}))?\]")
+_LYRICS_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) DesktopCards/1",
+    "Referer": "https://music.163.com/",
+}
+
+
+def _parse_lrc(text: str) -> list:
+    """把 LRC 文本解析成 [(秒, 歌词)]，按时间排序，跳过空行和元信息。"""
+    entries = []
+    for line in (text or "").splitlines():
+        stamps = list(_LRC_RE.finditer(line))
+        if not stamps:
+            continue
+        content = _LRC_RE.sub("", line).strip()
+        if not content:
+            continue
+        for match in stamps:
+            minute, second, frac = match.group(1), match.group(2), match.group(3)
+            sec = int(minute) * 60 + int(second)
+            if frac:
+                sec += int(frac) / (1000 if len(frac) == 3 else 100)
+            entries.append((float(sec), content))
+    entries.sort(key=lambda item: item[0])
+    deduped = []
+    for sec, content in entries:
+        if not deduped or deduped[-1][0] != sec or deduped[-1][1] != content:
+            deduped.append((sec, content))
+    return deduped
+
+
+def _fetch_lyrics(title: str, artist: str) -> list:
+    """按歌名 + 歌手去网易云找 LRC 歌词；找不到返回空列表，不影响播放器卡片。"""
+    query = f"{title} {artist}".strip()
+    if not query:
+        return []
+    try:
+        search_url = "https://music.163.com/api/search/get/web?" + urllib.parse.urlencode(
+            {"s": query, "type": 1, "offset": 0, "limit": 5}
+        )
+        request = urllib.request.Request(search_url, headers=_LYRICS_HEADERS)
+        with urllib.request.urlopen(request, timeout=8) as response:
+            data = json.loads(response.read().decode("utf-8", "replace"))
+        songs = ((data.get("result") or {}).get("songs")) or []
+        if not songs:
+            return []
+        wanted = title.strip().lower()
+        song = next((s for s in songs if (s.get("name") or "").strip().lower() == wanted), songs[0])
+        song_id = song.get("id")
+        if not song_id:
+            return []
+        lyric_url = (
+            f"https://music.163.com/api/song/lyric?id={song_id}&lv=-1&kv=-1&tv=-1"
+        )
+        request = urllib.request.Request(lyric_url, headers=_LYRICS_HEADERS)
+        with urllib.request.urlopen(request, timeout=8) as response:
+            payload = json.loads(response.read().decode("utf-8", "replace"))
+        raw = (payload.get("lrc") or {}).get("lyric") or ""
+        return _parse_lrc(raw)
+    except Exception as exc:
+        W.log(f"[lyrics] {exc!r}")
+        return []
+
+
 class ExtraHub:
     """音量 / 音乐 / 电量 / 日历的后台数据。"""
-
     def __init__(self, app):
         self.app = app
         self.volume = {"device": "", "master": None, "muted": False, "sessions": []}
@@ -1175,6 +1258,12 @@ class ExtraHub:
         self.media_proc = None
         self._media_lock = threading.Lock()
         self.media_file = os.path.join(W.APP_DIR, "assets", "media-state.json")
+        # 歌词：按「歌名|歌手」缓存，切歌时后台拉一次
+        self.lyrics = {}
+        self.lyric_key = ""
+        self.lyric_lines = []
+        self.lyric_loading = False
+        self._lyric_lock = threading.Lock()
 
     def start(self, on_change):
         self._notify = on_change
@@ -1295,11 +1384,64 @@ class ExtraHub:
             try:
                 before = self.media
                 self._refresh_media()
+                current = self.media or {}
+                if current.get("title") and on_change:
+                    self._ensure_lyrics(current.get("title"), current.get("artist"), on_change)
                 if self.media != before and on_change and not self._stop.is_set():
                     on_change()
             except Exception as exc:
                 W.log(f"[media] {exc!r}")
             self._stop.wait(1)
+
+    def _ensure_lyrics(self, title, artist, on_change) -> None:
+        """切歌就换歌词；同一首歌只请求一次，结果缓存在内存里。"""
+        key = f"{title}|{artist}"
+        with self._lyric_lock:
+            if key == self.lyric_key and (self.lyric_lines or self.lyric_loading):
+                return
+            cached = self.lyrics.get(key)
+            self.lyric_key = key
+            self.lyric_loading = cached is None
+            self.lyric_lines = cached or []
+        if cached is not None:
+            try:
+                on_change()
+            except Exception:
+                pass
+            return
+
+        def worker():
+            lines = _fetch_lyrics(title, artist)
+            with self._lyric_lock:
+                self.lyrics[key] = lines
+                if self.lyric_key == key:
+                    self.lyric_lines = lines
+                    self.lyric_loading = False
+            try:
+                on_change()
+            except Exception:
+                pass
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def lyric_pair(self, position) -> tuple:
+        """返回（当前行，下一行）；没有歌词就是两个空串。"""
+        lines = self.lyric_lines
+        if not lines:
+            return "", ""
+        try:
+            pos = float(position or 0)
+        except (TypeError, ValueError):
+            pos = 0.0
+        index = 0
+        for i, (sec, _) in enumerate(lines):
+            if sec <= pos:
+                index = i
+            else:
+                break
+        current = lines[index][1]
+        following = lines[index + 1][1] if index + 1 < len(lines) else ""
+        return current, following
 
     def _read_media_file(self, on_change):
         path = self.media_file
@@ -1394,12 +1536,24 @@ class ExtraHub:
         if info and info.playback_status is not None:
             status = getattr(info.playback_status, "name", str(info.playback_status))
             status = status.capitalize()
+        position = 0.0
+        duration = 0.0
+        try:
+            timeline = session.get_timeline_properties()
+            if timeline is not None:
+                position = max(0.0, float(timeline.position.total_seconds()))
+                duration = max(0.0, float(timeline.end_time.total_seconds()))
+        except Exception:
+            pass
         return {
             "app": session.source_app_user_model_id,
             "title": props.title or "",
             "artist": props.artist or "",
             "album": props.album_title or "",
             "status": status,
+            # 2 秒一档就够了：歌词按行跳，界面不用每秒重绘
+            "position": round(position / 2) * 2,
+            "duration": duration,
         }
 
     def _refresh_media(self):
@@ -1503,6 +1657,8 @@ class CardApp:
         self.gallery = GalleryWindow(self)
         self.host.add_tray()
         self.host.update_tip()
+        # 从旧配置/旧版本恢复的位置可能叠在一起，启动时先摆开
+        self.ensure_no_overlap()
 
         self.hub.start(self.host.post_rerender)
         self.extra.start(self.host.post_rerender)
@@ -1557,6 +1713,69 @@ class CardApp:
             outline=(84, 228, 190, 120), width=1
         )
         return img, margin
+
+    def _card_gap(self) -> int:
+        return max(4, int(round(CARD_GAP * self.scale)))
+
+    def _overlaps_at(self, card: CardWindow, x: int, y: int) -> bool:
+        gap = self._card_gap()
+        for other in self.cards:
+            if other is card or not other.visible:
+                continue
+            if (x < other.card_x + other.card_w + gap and
+                    x + card.card_w + gap > other.card_x and
+                    y < other.card_y + other.card_h + gap and
+                    y + card.card_h + gap > other.card_y):
+                return True
+        return False
+
+    def _find_free_spot(self, card: CardWindow, x: int, y: int) -> tuple:
+        """从给定位置向外按网格找最近的不重叠位置；找不到就退回原位。"""
+        left, top, right, bottom = _work_area()
+        max_x = max(left, right - card.card_w)
+        max_y = max(top, bottom - card.card_h)
+        x = max(left, min(int(x), max_x))
+        y = max(top, min(int(y), max_y))
+        if not self._overlaps_at(card, x, y):
+            return x, y
+        step = max(8, int(round(SNAP_GRID * self.scale)))
+        max_ring = max(8, int(max(right - left, bottom - top) / step) + 2)
+        for ring in range(1, max_ring + 1):
+            best = None
+            for dx in range(-ring, ring + 1):
+                for dy in range(-ring, ring + 1):
+                    if max(abs(dx), abs(dy)) != ring:
+                        continue
+                    nx = max(left, min(x + dx * step, max_x))
+                    ny = max(top, min(y + dy * step, max_y))
+                    if self._overlaps_at(card, nx, ny):
+                        continue
+                    dist = (nx - x) ** 2 + (ny - y) ** 2
+                    # 同样距离时优先往右下让，符合「从左上拖过来」的直觉
+                    rank = (dist, 0 if (dx >= 0 and dy >= 0) else 1)
+                    if best is None or rank < best[0]:
+                        best = (rank, nx, ny)
+            if best:
+                return best[1], best[2]
+        return card.card_x, card.card_y
+
+    def ensure_no_overlap(self, focus=None, save: bool = True) -> bool:
+        """把所有可见卡摆成互不重叠；focus 卡优先保留当前/目标位置。"""
+        order = list(self.cards)
+        if focus in order:
+            order.remove(focus)
+            order.insert(0, focus)
+        moved = False
+        for card in order:
+            if not card.visible:
+                continue
+            nx, ny = self._find_free_spot(card, card.card_x, card.card_y)
+            if (nx, ny) != (card.card_x, card.card_y):
+                card.set_card_pos(nx, ny)
+                moved = True
+        if moved and save:
+            self.save_layout()
+        return moved
 
     def begin_drag(self, card: CardWindow) -> None:
         self.drag_card = card
@@ -1661,6 +1880,8 @@ class CardApp:
         if self.drag_card is not card:
             return
         sx, sy, _, _ = self.compute_snap(card)
+        # 松手后不允许叠到别的卡上：吸到最近的空位
+        sx, sy = self._find_free_spot(card, sx, sy)
         card.set_card_pos(sx, sy)
         self._hide_feedback()
         self.drag_card = None
@@ -1762,7 +1983,8 @@ class CardApp:
             card.card_h = max(1, int(round(card.rect[3] * card.scale)))
             image, offset, buttons = self.crop_card(card.rect, card.scale)
         card.update_image(image, offset, buttons)
-        card.set_card_pos(card.card_x, card.card_y)
+        nx, ny = self._find_free_spot(card, card.card_x, card.card_y)
+        card.set_card_pos(nx, ny)
 
     def preview_card_zoom(self, card: CardWindow, zoom: float) -> None:
         """拖动缩放时先用位图拉伸预览，松手后再按新尺寸重绘。"""
@@ -1860,6 +2082,7 @@ class CardApp:
             x, y = positions[card.key]
             card.set_card_pos(x, y)
         self.apply_visibility()
+        self.ensure_no_overlap(save=False)
         self.save_layout()
         self.refresh()
         self.desktop_active_state = None
@@ -1949,6 +2172,7 @@ class CardApp:
         else:
             self.hidden_keys.add(key)
         self.apply_visibility()
+        self.ensure_no_overlap(save=False)
         self.save_layout()
         self.refresh()
         self.desktop_active_state = None
@@ -1975,6 +2199,7 @@ class CardApp:
         self.visible = not self.visible
         self.apply_visibility()
         if self.visible:
+            self.ensure_no_overlap()
             self.refresh()
         self.desktop_active_state = None
         self.sync_desktop_layer()

@@ -88,6 +88,13 @@ while ($true) {
       if ($info) { $status = [string]$info.PlaybackStatus }
       $position = 0.0
       $duration = 0.0
+      try {
+        $timeline = $session.GetTimelineProperties()
+        if ($null -ne $timeline) {
+          $position = [double]$timeline.Position.TotalSeconds
+          $duration = [double]$timeline.EndTime.TotalSeconds
+        }
+      } catch {}
       $media = @{
         app = [string]$session.SourceAppUserModelId
         title = $title
