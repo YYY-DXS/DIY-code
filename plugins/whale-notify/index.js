@@ -287,16 +287,21 @@ export function apply(ctx) {
       mood.lastLineAt = Date.now()
       saveMood()
       sequence += 1
-      // Synthesise first (bounded), then publish line and voice together.
-      const voice = await speakable(reply.line)
+      // Publish the text immediately; the voice follows when synthesis finishes.
       script = {
         line: reply.line,
         expression: reply.expression,
-        voice: voice ?? '',
+        voice: '',
         summary: `心情 ${mood.mood} · 好感 ${mood.affinity} · 饱食 ${mood.satiety}`,
       }
       writeState()
-      hostLog(`line(${kind}) ${reply.line} [${reply.expression}]${voice ? ' +voice' : ' (no voice)'}`)
+      hostLog(`line(${kind}) ${reply.line} [${reply.expression}]`)
+      const voice = await speakable(reply.line)
+      if (!stopped && voice !== undefined) {
+        script = { ...script, voice }
+        writeState()
+        hostLog('voice ready')
+      }
     } finally {
       busy = false
     }

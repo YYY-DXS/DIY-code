@@ -39,6 +39,7 @@ $script:patCount = 0
 $script:clickTimer = $null
 $script:ttsPath = ''
 $script:ttsTimer = $null
+$script:lastVoice = ''
 $script:left = 0
 $script:shutdownTimer = $null
 $script:lastStateAt = [datetime]::MinValue
@@ -395,8 +396,11 @@ function Poll-State {
         $script:expression = [string]$state.expression
         $script:expressionUntil = (Get-Date).AddSeconds(8)
         Refresh-Pose
-        if ($state.voice) { Speak-Generated ([string]$state.line) ([string]$state.voice) }
       }
+    }
+    if ($state.voice -and [string]$state.voice -ne $script:lastVoice) {
+      $script:lastVoice = [string]$state.voice
+      Speak-Generated ([string]$state.line) ([string]$state.voice)
     }
     Set-Phase (EffectivePhase)
   } catch { }
