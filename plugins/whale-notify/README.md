@@ -85,10 +85,10 @@ run without touching DSH itself.
   than 30 minutes of silence. `tools/generate-voice.py` regenerates them with the
   per-line rate/pitch pairs; synthesis needs the network, playback does not. The
   tray menu's **silence** checkbox mutes everything and survives restarts.
-- **Interactions**: single-click her for a line (with a small bounce),
-  double-click for a pat (every fifth pat earns an annoyed line), and use the tray
-  menu for **说一句** and **喂小鱼干**; the fed count is remembered in
-  `widget.json`.
+- **Interactions**: **single-click** her for a pat (a 230 ms delay keeps a
+  double-click from patting first; every fifth pat earns an annoyed line),
+  **double-click** for a spoken line, and the tray menu for **说一句** and
+  **喂小鱼干**; the fed count is remembered in `widget.json`.
 - The Host half starts this process when the plugin activates, so a freshly
   installed or edited bundle needs **one DSH restart** to take over spawning.
   Disabling the plugin closes the window and cancels a pending shutdown.

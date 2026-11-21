@@ -34,6 +34,7 @@ $script:armed = $false
 $script:muted = $false
 $script:fed = 0
 $script:patCount = 0
+$script:clickTimer = $null
 $script:left = 0
 $script:shutdownTimer = $null
 $script:lastStateAt = [datetime]::MinValue
@@ -412,8 +413,24 @@ $still.Add_MouseLeftButtonUp({
   $script:windowLeft = $window.Left
   $script:windowTop = $window.Top
   if ($drag.moved) { Save-Config; return }
-  if ($eventArgs.ClickCount -ge 2) { SayPat } else { SayTalk }
+  if ($eventArgs.ClickCount -ge 2) {
+    # double click: cancel the pending pat, say a line instead
+    if ($script:clickTimer -ne $null) { $script:clickTimer.Stop(); $script:clickTimer = $null }
+    SayTalk
+    return
+  }
+  # single click: wait briefly so a double click does not pat first
+  if ($script:clickTimer -ne $null) { $script:clickTimer.Stop() }
+  $script:clickTimer = New-Object System.Windows.Threading.DispatcherTimer
+  $script:clickTimer.Interval = [TimeSpan]::FromMilliseconds(230)
+  $script:clickTimer.Add_Tick({
+    $script:clickTimer.Stop()
+    $script:clickTimer = $null
+    SayPat
+  })
+  $script:clickTimer.Start()
 })
+$still.ToolTip = '单击：摸摸头 / 双击：说一句话 / 右键托盘：更多'
 $window.Add_LocationChanged({ $script:windowLeft = $window.Left; $script:windowTop = $window.Top })
 $window.Add_Closed({
   Save-Config
