@@ -80,11 +80,15 @@ run without touching DSH itself.
   plugin loads, so a reload during a run is not mistaken for idle. If the heartbeat stops for 75 s (DSH closed or the plugin
   disabled) the chip turns **离线** instead of freezing on the last pose.
   Refreshing the web page does not affect this window: it follows that file.
-- Voice: ten pre-synthesised lines (see `assets/voice`) at **30% volume** - one
-  short line per state change, a greeting when the widget starts within ten
-  minutes of a machine boot, and a greeting when work resumes after more than 30
-  minutes of silence. The tray menu's **silence** checkbox mutes everything,
-  including those greetings, and the choice survives restarts.
+- Voice: twenty **Edge neural (zh-CN-XiaoyiNeural)** lines in `assets/voice`, at
+  **30% volume** - one per state change, plus a greeting at boot and after more
+  than 30 minutes of silence. `tools/generate-voice.py` regenerates them with the
+  per-line rate/pitch pairs; synthesis needs the network, playback does not. The
+  tray menu's **silence** checkbox mutes everything and survives restarts.
+- **Interactions**: single-click her for a line (with a small bounce),
+  double-click for a pat (every fifth pat earns an annoyed line), and use the tray
+  menu for **说一句** and **喂小鱼干**; the fed count is remembered in
+  `widget.json`.
 - The Host half starts this process when the plugin activates, so a freshly
   installed or edited bundle needs **one DSH restart** to take over spawning.
   Disabling the plugin closes the window and cancels a pending shutdown.

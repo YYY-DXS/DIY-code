@@ -32,6 +32,8 @@ Log "start state=$StatePath assets=$AssetsDir"
 $script:phase = ''
 $script:armed = $false
 $script:muted = $false
+$script:fed = 0
+$script:patCount = 0
 $script:left = 0
 $script:shutdownTimer = $null
 $script:lastStateAt = [datetime]::MinValue
@@ -47,7 +49,7 @@ function Read-Config {
 }
 
 function Save-Config {
-  $payload = @{ left = [int]$script:windowLeft; top = [int]$script:windowTop; armed = [bool]$script:armed; muted = [bool]$script:muted } | ConvertTo-Json
+  $payload = @{ left = [int]$script:windowLeft; top = [int]$script:windowTop; armed = [bool]$script:armed; muted = [bool]$script:muted; fed = [int]$script:fed; pat = [int]$script:patCount } | ConvertTo-Json
   try { Set-Content -LiteralPath $configPath -Value $payload -Encoding UTF8 -ErrorAction Stop } catch { }
 }
 
@@ -123,8 +125,10 @@ $dots = @{
 # 轻微浮动 + 摇摆
 $group = New-Object System.Windows.Media.TransformGroup
 $tilt = New-Object System.Windows.Media.RotateTransform
+$scale = New-Object System.Windows.Media.ScaleTransform
 $float = New-Object System.Windows.Media.TranslateTransform
 [void]$group.Children.Add($tilt)
+[void]$group.Children.Add($scale)
 [void]$group.Children.Add($float)
 $still.RenderTransform = $group
 $still.RenderTransformOrigin = New-Object System.Windows.Point(0.5, 0.5)
@@ -142,6 +146,40 @@ $tiltAnim.AutoReverse = $true
 $tiltAnim.RepeatBehavior = [System.Windows.Media.Animation.RepeatBehavior]::Forever
 $tiltAnim.EasingFunction = $ease
 $tilt.BeginAnimation([System.Windows.Media.RotateTransform]::AngleProperty, $tiltAnim)
+
+function Bounce {
+  foreach ($prop in @([System.Windows.Media.ScaleTransform]::ScaleXProperty, [System.Windows.Media.ScaleTransform]::ScaleYProperty)) {
+    $anim = New-Object System.Windows.Media.Animation.DoubleAnimation(1.0, 1.08, [TimeSpan]::FromMilliseconds(110))
+    $anim.AutoReverse = $true
+    $anim.EasingFunction = New-Object System.Windows.Media.Animation.SineEase
+    $scale.BeginAnimation($prop, $anim)
+  }
+}
+
+function SayTalk {
+  Bounce
+  Speak (Pick-Voice @('talk-1.mp3', 'talk-2.mp3', 'talk-3.mp3', 'talk-4.mp3', 'talk-5.mp3'))
+}
+
+function SayPat {
+  Bounce
+  $script:patCount += 1
+  Save-Config
+  if (($script:patCount % 5) -eq 0) { Speak 'pat-3.mp3' } else { Speak (Pick-Voice @('pat-1.mp3', 'pat-2.mp3')) }
+}
+
+function SayFeed {
+  Bounce
+  $script:fed += 1
+  Save-Config
+  Update-FeedMenu
+  Speak (Pick-Voice @('feed-1.mp3', 'feed-2.mp3'))
+}
+
+function Update-FeedMenu {
+  if ($script:feedItem -eq $null) { return }
+  try { $script:feedItem.Text = ("喂小鱼干（已喂 {0} 条）" -f $script:fed) } catch { }
+}
 
 function Speak([string]$name) {
   if (-not $name) { return }
@@ -276,6 +314,8 @@ if ($config -ne $null -and $config.left -ne $null -and $config.top -ne $null) {
 $script:windowLeft = $window.Left
 $script:windowTop = $window.Top
 if ($config -ne $null -and $config.muted -eq $true) { $script:muted = $true }
+if ($config -ne $null -and $config.fed -ne $null) { $script:fed = [int]$config.fed }
+if ($config -ne $null -and $config.pat -ne $null) { $script:patCount = [int]$config.pat }
 Log ("window at {0},{1}" -f $window.Left, $window.Top)
 
 # 托盘图标
@@ -291,6 +331,8 @@ try {
   $muteItem = New-Object System.Windows.Forms.ToolStripMenuItem '静音'
   $muteItem.CheckOnClick = $true
   $muteItem.Checked = $script:muted
+  $talkItem = New-Object System.Windows.Forms.ToolStripMenuItem '说一句'
+  $feedItem = New-Object System.Windows.Forms.ToolStripMenuItem '喂小鱼干'
   $armItem = New-Object System.Windows.Forms.ToolStripMenuItem '完成后关机'
   $armItem.CheckOnClick = $true
   $armItem.Checked = $script:armed
@@ -300,6 +342,8 @@ try {
   [void]$menu.Items.Add((New-Object System.Windows.Forms.ToolStripSeparator))
   [void]$menu.Items.Add($showItem)
   [void]$menu.Items.Add($muteItem)
+  [void]$menu.Items.Add($talkItem)
+  [void]$menu.Items.Add($feedItem)
   [void]$menu.Items.Add($armItem)
   [void]$menu.Items.Add($cancelItem)
   [void]$menu.Items.Add((New-Object System.Windows.Forms.ToolStripSeparator))
@@ -311,6 +355,10 @@ try {
     Save-Config
     Update-NotifyText $script:phase
   })
+  $talkItem.Add_Click({ SayTalk })
+  $feedItem.Add_Click({ SayFeed })
+  $script:feedItem = $feedItem
+  Update-FeedMenu
   $armItem.Add_Click({
     $script:armed = $armItem.Checked
     if (-not $script:armed) { Stop-Countdown }
@@ -338,7 +386,34 @@ function Update-ArmedMenu {
   if ($armItemRef -ne $null) { try { $armItemRef.Checked = $script:armed } catch { } }
 }
 
-$still.Add_MouseLeftButtonDown({ try { $window.DragMove() } catch { } })
+$script:drag = $null
+$still.Add_MouseLeftButtonDown({
+  $pos = [System.Windows.Forms.Cursor]::Position
+  $script:drag = @{ x = $pos.X; y = $pos.Y; left = $window.Left; top = $window.Top; moved = $false }
+  try { $still.CaptureMouse() | Out-Null } catch { }
+})
+$still.Add_MouseMove({
+  if ($script:drag -eq $null) { return }
+  $pos = [System.Windows.Forms.Cursor]::Position
+  $dx = $pos.X - $script:drag.x
+  $dy = $pos.Y - $script:drag.y
+  if ([math]::Abs($dx) -gt 3 -or [math]::Abs($dy) -gt 3) { $script:drag.moved = $true }
+  if ($script:drag.moved) {
+    $window.Left = $script:drag.left + $dx
+    $window.Top = $script:drag.top + $dy
+  }
+})
+$still.Add_MouseLeftButtonUp({
+  param($sender, $eventArgs)
+  try { $still.ReleaseMouseCapture() } catch { }
+  $drag = $script:drag
+  $script:drag = $null
+  if ($drag -eq $null) { return }
+  $script:windowLeft = $window.Left
+  $script:windowTop = $window.Top
+  if ($drag.moved) { Save-Config; return }
+  if ($eventArgs.ClickCount -ge 2) { SayPat } else { SayTalk }
+})
 $window.Add_LocationChanged({ $script:windowLeft = $window.Left; $script:windowTop = $window.Top })
 $window.Add_Closed({
   Save-Config
