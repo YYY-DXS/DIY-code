@@ -9,7 +9,7 @@
 
 ## 下载
 
-最新发行版：[v2.2.0](https://github.com/YYY-DXS/DIY-code/releases/tag/v2.2.0)
+最新发行版：[v2.2.1](https://github.com/YYY-DXS/DIY-code/releases/tag/v2.2.1)
 
 每个软件一个 zip，解压即用；`SHA256SUMS.txt` 可核对下载完整性。
 
@@ -38,7 +38,7 @@ SmartScreen 对「未知发布者 + 新文件」一律拦截。
 | [`tools/`](tools/README.md) | 配套工具：DeepSeek 记录同步、Git 同步、隐私检查、Markdown 转换 |
 | [`docs/`](docs/) | 首次运行提示、代码签名方案与发布检查清单 |
 
-## 本次 v2.2.0 收录
+## 本次 v2.2.1 收录
 
 | 包 | 类型 | 用途 |
 | --- | --- | --- |

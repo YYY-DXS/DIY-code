@@ -30,6 +30,8 @@ from PIL import Image, ImageDraw, ImageFilter
 import widget as W
 
 SNAP_GRID = 40
+SIZE_GRID = 40                   # 缩放时卡片宽度也对齐到这个像素网格
+MIN_CARD_PX = 80                 # 再小就没法看，也保证卡片还能拖动
 SNAP_MAGNET = 40                 # 磁吸范围：离对齐线 40px 内就吸过去
 CARD_GAP = 12                    # 卡片之间统一的视觉间距（DIP）
 CARD_MARGIN = 10                 # 裁剪时给阴影留的余量（DIP）
@@ -1655,10 +1657,16 @@ class CardApp:
             card.set_visible(card.key not in self.hidden_keys)
         self._create_overlays()
         self.gallery = GalleryWindow(self)
+        # 尺寸统一吸到 40px 网格：所有卡宽度都是 40 的倍数，右边缘自然对齐
+        for card in self.cards:
+            snapped = self._snap_zoom(card, card.zoom)
+            if abs(snapped - card.zoom) > 0.001:
+                self._apply_zoom(card, snapped)
         self.host.add_tray()
         self.host.update_tip()
         # 从旧配置/旧版本恢复的位置可能叠在一起，启动时先摆开
         self.ensure_no_overlap()
+        self.save_layout()
 
         self.hub.start(self.host.post_rerender)
         self.extra.start(self.host.post_rerender)
@@ -1734,11 +1742,16 @@ class CardApp:
         left, top, right, bottom = _work_area()
         max_x = max(left, right - card.card_w)
         max_y = max(top, bottom - card.card_h)
-        x = max(left, min(int(x), max_x))
-        y = max(top, min(int(y), max_y))
+
+        def snap(value, origin):
+            return int(origin + round((value - origin) / SNAP_GRID) * SNAP_GRID)
+
+        # 位置本身先对齐 40px 网格，避免「差 2px」这种强迫症问题
+        x = max(left, min(snap(x, left), snap(max_x, left)))
+        y = max(top, min(snap(y, top), snap(max_y, top)))
         if not self._overlaps_at(card, x, y):
             return x, y
-        step = max(8, int(round(SNAP_GRID * self.scale)))
+        step = SNAP_GRID
         max_ring = max(8, int(max(right - left, bottom - top) / step) + 2)
         for ring in range(1, max_ring + 1):
             best = None
@@ -1967,8 +1980,74 @@ class CardApp:
             return Image.new("RGBA", (w, h), (0, 0, 0, 0)), (0, 0), {}
         return fn(self, w, h, scale)
 
-    def set_card_zoom(self, card: CardWindow, zoom: float) -> None:
+    def _base_size(self, card: CardWindow) -> tuple:
+        if card.kind == "custom":
+            return CUSTOM_SPECS[card.key]
+        return (card.rect[2], card.rect[3])
+
+    def _snap_zoom(self, card: CardWindow, zoom: float, down: bool = False) -> float:
+        """把缩放换算成卡片像素宽度，并对齐到 SIZE_GRID。"""
+        base_w, _ = self._base_size(card)
+        base_px = max(1.0, base_w * self.scale)
+        width = base_px * zoom
+        if down:
+            snapped = max(MIN_CARD_PX, (int(width) // SIZE_GRID) * SIZE_GRID)
+        else:
+            snapped = max(MIN_CARD_PX, int(round(width / SIZE_GRID)) * SIZE_GRID)
+            # 向下取整到网格时不能掉到 0.6 以下，必要时向上补一格
+            while snapped / base_px < 0.6 - 1e-9 and snapped < base_px * 2.2:
+                snapped += SIZE_GRID
+        return snapped / base_px
+
+    def _limit_zoom(self, card: CardWindow, zoom: float) -> float:
+        """限制放大：不出工作区，也不压到别的卡（压到就往回收）。"""
+        _, _, right, bottom = _work_area()
+        base_w, base_h = self._base_size(card)
+        gap = self._card_gap()
+        x, y = card.card_x, card.card_y
+        limit = min(
+            max(MIN_CARD_PX, right - x) / max(1.0, base_w * self.scale),
+            max(MIN_CARD_PX, bottom - y) / max(1.0, base_h * self.scale),
+        )
+        for other in self.cards:
+            if other is card or not other.visible:
+                continue
+            for _ in range(4):
+                width = base_w * self.scale * zoom
+                height = base_h * self.scale * zoom
+                overlaps = (
+                    x < other.card_x + other.card_w + gap and
+                    x + width + gap > other.card_x and
+                    y < other.card_y + other.card_h + gap and
+                    y + height + gap > other.card_y
+                )
+                if not overlaps:
+                    break
+                candidates = []
+                if other.card_x > x:
+                    candidates.append((other.card_x - x - gap) / max(1.0, base_w * self.scale))
+                if other.card_y > y:
+                    candidates.append((other.card_y - y - gap) / max(1.0, base_h * self.scale))
+                if not candidates:
+                    break
+                zoom = min([zoom] + candidates)
+        return max(0.6, min(2.2, min(zoom, limit)))
+
+    def _fit_zoom(self, card: CardWindow, zoom: float) -> float:
+        """拖动缩放和松手都用这一套：先吸网格，再按空间/邻卡限制。"""
         zoom = max(0.6, min(2.2, float(zoom)))
+        snapped = self._snap_zoom(card, zoom)
+        limited = self._limit_zoom(card, snapped)
+        if abs(limited - snapped) > 1e-6:
+            # 只有被邻卡/屏幕挡住时才向下取整，避免白白缩小一格
+            limited = self._snap_zoom(card, limited, down=True)
+        return max(0.6, min(2.2, limited))
+
+    def set_card_zoom(self, card: CardWindow, zoom: float) -> None:
+        """拖动/松手时调用：吸附网格并按邻卡与屏幕限制。"""
+        self._apply_zoom(card, self._fit_zoom(card, zoom))
+
+    def _apply_zoom(self, card: CardWindow, zoom: float) -> None:
         card.zoom = zoom
         card.scale = self.scale * zoom
         if card.kind == "custom":
@@ -1983,14 +2062,16 @@ class CardApp:
             card.card_h = max(1, int(round(card.rect[3] * card.scale)))
             image, offset, buttons = self.crop_card(card.rect, card.scale)
         card.update_image(image, offset, buttons)
-        nx, ny = self._find_free_spot(card, card.card_x, card.card_y)
-        card.set_card_pos(nx, ny)
+        # 尺寸已经按网格和邻卡限制过，位置保持不动（只做兜底防重叠）
+        if self._overlaps_at(card, card.card_x, card.card_y):
+            nx, ny = self._find_free_spot(card, card.card_x, card.card_y)
+            card.set_card_pos(nx, ny)
 
     def preview_card_zoom(self, card: CardWindow, zoom: float) -> None:
         """拖动缩放时先用位图拉伸预览，松手后再按新尺寸重绘。"""
         if card.resize_snapshot is None:
             return
-        zoom = max(0.6, min(2.2, float(zoom)))
+        zoom = self._fit_zoom(card, zoom)
         ratio = zoom / max(0.01, card.resize_base)
         bw, bh = card.resize_base_card
         ox, oy = card.resize_base_offset
@@ -2032,7 +2113,7 @@ class CardApp:
         extra_x = max(left, px - int((280 + CARD_GAP) * self.scale))
         music_y = py + int((200 + CARD_GAP) * self.scale)
         extra_y2 = py + int((200 + CARD_GAP + 200 + CARD_GAP) * self.scale)
-        return {
+        raw = {
             "weather": (px, py),
             "balance": (px + weather_w + gap, py),
             "system": (px, py + weather_h + gap),
@@ -2041,6 +2122,11 @@ class CardApp:
             "battery": (extra_x, extra_y2),
             "calendar": (extra_x + int((220 + CARD_GAP) * self.scale), extra_y2),
         }
+
+        def grid(value, origin):
+            return int(origin + round((value - origin) / SNAP_GRID) * SNAP_GRID)
+
+        return {key: (grid(pos[0], left), grid(pos[1], top)) for key, pos in raw.items()}
 
     def _load_positions(self) -> dict:
         defaults = self._default_positions()
