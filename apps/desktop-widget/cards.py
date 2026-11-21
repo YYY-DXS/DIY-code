@@ -34,6 +34,7 @@ SIZE_GRID = 40                   # 缩放时卡片宽度也对齐到这个像素
 MIN_CARD_PX = 80                 # 再小就没法看，也保证卡片还能拖动
 SNAP_MAGNET = 40                 # 磁吸范围：离对齐线 40px 内就吸过去
 CARD_GAP = 12                    # 卡片之间统一的视觉间距（DIP）
+MIN_CARD_GAP = 12                # 横竖方向至少留这么多屏幕像素，防止「粘一块」
 CARD_MARGIN = 10                 # 裁剪时给阴影留的余量（DIP）
 HTTRANSPARENT = -1
 HTCLIENT = 1
@@ -1723,7 +1724,15 @@ class CardApp:
         return img, margin
 
     def _card_gap(self) -> int:
-        return max(4, int(round(CARD_GAP * self.scale)))
+        # 缩放后间距会变小，这里给一个下限：任何两张卡之间至少 MIN_CARD_GAP 像素
+        return max(MIN_CARD_GAP, int(round(CARD_GAP * self.scale)))
+
+    def _rects_collide(self, ax, ay, aw, ah, bx, by, bw, bh) -> bool:
+        gap = self._card_gap()
+        return (ax < bx + bw + gap and
+                ax + aw + gap > bx and
+                ay < by + bh + gap and
+                ay + ah + gap > by)
 
     def _overlaps_at(self, card: CardWindow, x: int, y: int, ignore=None) -> bool:
         gap = self._card_gap()
@@ -1878,7 +1887,11 @@ class CardApp:
         targets = self._cards_at(card, sx, sy)
         can_swap = (
             len(targets) == 1 and
-            not self._overlaps_at(targets[0], card.card_x, card.card_y, ignore=card)
+            not self._overlaps_at(targets[0], card.card_x, card.card_y, ignore=card) and
+            # 互换后两张卡不能还叠在一起：拖拽目标可能只压到对方一半
+            not self._rects_collide(sx, sy, card.card_w, card.card_h,
+                                    card.card_x, card.card_y,
+                                    targets[0].card_w, targets[0].card_h)
         )
         if not can_swap:
             sx, sy = self._find_free_spot(card, sx, sy)
@@ -1921,7 +1934,12 @@ class CardApp:
         if len(targets) == 1:
             other = targets[0]
             old_x, old_y = card.card_x, card.card_y
-            if not self._overlaps_at(other, old_x, old_y, ignore=card):
+            swap_is_clean = (
+                not self._overlaps_at(other, old_x, old_y, ignore=card) and
+                not self._rects_collide(sx, sy, card.card_w, card.card_h,
+                                        old_x, old_y, other.card_w, other.card_h)
+            )
+            if swap_is_clean:
                 card.set_card_pos(sx, sy)
                 other.set_card_pos(old_x, old_y)
                 self._hide_feedback()
