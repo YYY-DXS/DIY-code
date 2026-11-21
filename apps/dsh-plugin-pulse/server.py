@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """DSH 插件安装面板（图形化）—— 本地 HTTP 服务，只监听 127.0.0.1。
 
@@ -15,6 +15,7 @@ import html as html_mod
 import json
 import os
 import re
+import secrets
 import shutil
 import socket
 import subprocess
@@ -33,6 +34,11 @@ APP_TITLE = "DSH 插件安装面板"
 HOST = "127.0.0.1"
 PORT = int(os.environ.get("DSH_INSTALLER_PORT", "8790"))
 URL = f"http://{HOST}:{PORT}/"
+
+# CSRF / 本地提权防护：任何网页都能向 127.0.0.1 发简单 POST，
+# 而 /api/install 会调用 dsh 安装任意包（npm 包的 postinstall 直接等于执行代码）。
+# 因此每次启动生成一次性令牌，页面上从 meta 读取，非本页发起的请求一律 403。
+TOKEN = os.environ.get("DSH_INSTALLER_TOKEN") or secrets.token_urlsafe(24)
 
 FROZEN = bool(getattr(sys, "frozen", False))
 _BASE = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent)) if FROZEN else Path(__file__).resolve().parent
@@ -905,6 +911,17 @@ class Handler(BaseHTTPRequestHandler):
         except Exception:
             return {}
 
+    def _guard(self):
+        """挡住跨站请求：Origin 必须是本机面板，且必须带本次启动的令牌。"""
+        origin = (self.headers.get("Origin") or "").strip()
+        if origin:
+            allowed = {f"http://127.0.0.1:{PORT}", f"http://localhost:{PORT}"}
+            if origin not in allowed:
+                log(f"拒绝跨站请求：Origin={origin} {self.path}")
+                return False
+        token = (self.headers.get("X-DSH-Token") or "").strip()
+        return bool(token) and secrets.compare_digest(token, TOKEN)
+
     def do_GET(self):
         path = self.path.split("?")[0]
         if path in ("/", "/index.html"):
@@ -912,6 +929,13 @@ class Handler(BaseHTTPRequestHandler):
                 html = UI_PATH.read_bytes()
             except FileNotFoundError:
                 return self._json(500, {"error": "ui.html 缺失"})
+            # 把本次启动的令牌注入页面，页面上的 fetch 会带上它
+            if b"</head>" in html:
+                html = html.replace(
+                    b"</head>",
+                    f'<meta name="dsh-token" content="{TOKEN}"></head>'.encode("utf-8"),
+                    1,
+                )
             return self._send(200, html, "text/html; charset=utf-8")
         if path == "/api/health":
             return self._json(200, {"ok": bool(DSH_EXE and DSH_EXE.exists() and DSH_ASAR and DSH_ASAR.exists()),
@@ -962,6 +986,8 @@ class Handler(BaseHTTPRequestHandler):
         return self._json(404, {"error": "not found"})
 
     def do_POST(self):
+        if not self._guard():
+            return self._json(403, {"error": "缺少或错误的令牌，请从面板页面操作"})
         path = self.path.split("?")[0]
         data = self._body()
         if path in ("/api/install", "/api/uninstall"):

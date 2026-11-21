@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
@@ -229,8 +229,12 @@ function el(tag, cls, text) {
   if (text !== undefined) n.textContent = text;
   return n;
 }
+const DSH_TOKEN = (document.querySelector('meta[name="dsh-token"]') || {}).content || '';
 async function api(path, opts) {
-  const r = await fetch(path, opts);
+  opts = opts || {};
+  const headers = Object.assign({}, opts.headers || {});
+  if (DSH_TOKEN) headers['X-DSH-Token'] = DSH_TOKEN;
+  const r = await fetch(path, Object.assign({}, opts, { headers }));
   const j = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
   return j;
@@ -596,7 +600,7 @@ $('spec').addEventListener('keydown', e => { if (e.key === 'Enter') $('custom-in
 $('close-console').onclick = () => $('console').classList.remove('show');
 $('shutdown').onclick = async () => {
   if (!confirm('停止本地面板服务？浏览器页面会失效，但已安装的插件不受影响。')) return;
-  try { await fetch('/api/shutdown', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }); } catch (e) {}
+  try { await fetch('/api/shutdown', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-DSH-Token': DSH_TOKEN }, body: '{}' }); } catch (e) {}
   document.body.innerHTML = '<div style="padding:60px;color:#8b949e;font:16px sans-serif">面板已停止，可关闭此页面。</div>';
 };
 $('lib-rescan').onclick = async () => {

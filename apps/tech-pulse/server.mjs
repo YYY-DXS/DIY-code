@@ -257,6 +257,16 @@ const server = createServer(async (request, response) => {
   const url = new URL(request.url, `http://${request.headers.host || "localhost"}`);
   try {
     await ready;
+    // 本地服务也要防跨站：浏览器对简单 POST（text/plain、无自定义头）不做预检，
+    // 任何网页都能往 127.0.0.1 发请求并触发 /api/run 之类的动作。
+    const origin = request.headers.origin;
+    if (
+      request.method !== "GET" &&
+      origin &&
+      !/^https?:\/\/(127\.0\.0\.1|localhost|\[::1\])(:\d+)?$/.test(origin)
+    ) {
+      return json(response, 403, { error: "跨站请求已拒绝" });
+    }
     if (url.pathname === "/api/bootstrap" && request.method === "GET") {
       const [config, state, latest] = await Promise.all([
         store.getConfig(),

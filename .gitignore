@@ -1,4 +1,4 @@
-# 排版检查用的截图
+﻿# 排版检查用的截图
 .preview/
 *.log
 
@@ -44,3 +44,16 @@ plugins/*/release/
 # 构建时生成的临时元数据文件
 launcher-info.cs
 win-version.txt
+# 密钥与证书：本地开发也不要进仓库
+.env
+.env.*
+*.pfx
+*.p12
+*.pem
+*.key
+secrets.json
+id_rsa*
+
+# 运行日志与本地数据库
+*.sqlite
+*.db
