@@ -93,7 +93,7 @@ export function apply(ctx) {
   let stopped = false
   let sequence = 0
   /** Last generated bubble: line, expression, spoken file, and its sequence. */
-  let script = { line: '', expression: '', voice: '', summary: '' }
+  let script = { line: '', expression: '', voice: '', summary: '', effect: '' }
   let mood = { ...DEFAULT_MOOD }
   let busy = false
   let lastRequestAt = 0
@@ -134,13 +134,14 @@ export function apply(ctx) {
   }
 
   /** Publish a fixed line with one of the pre-generated voices. */
-  const publishFixed = (line, expression, voiceFile) => {
+  const publishFixed = (line, expression, voiceFile, effect = '') => {
     sequence += 1
     script = {
       line,
       expression,
       voice: join(HERE, 'assets', 'voice', voiceFile),
       summary: `心情 ${mood.mood} · 好感 ${mood.affinity} · 饱食 ${mood.satiety} · ${mealSummary()}`,
+      effect,
     }
     writeState()
   }
@@ -169,6 +170,7 @@ export function apply(ctx) {
         expression: script.expression,
         voice: script.voice,
         summary: script.summary,
+        effect: script.effect,
         seq: sequence,
       }), 'utf8')
     } catch (error) {
@@ -386,14 +388,33 @@ export function apply(ctx) {
         return
       }
       const meals = mealsToday()
-      if (meals[meal.id] === true) {
-        publishFixed('这顿已经吃过啦，主人别把人家喂胖～', 'denied', 'meal-done.mp3')
+      const full = mood.satiety >= 100
+      const eaten = meals[meal.id] === true
+      if (full || eaten) {
+        // Strict verdict: a full belly or a finished meal turns her sulky, then angry.
+        mood.feedAttempts = (mood.feedAttempts ?? 0) + 1
+        const angry = full || mood.feedAttempts >= 2
+        if (angry) {
+          mood.mood = clamp(mood.mood - 4, 0, 100)
+          mood.affinity = clamp(mood.affinity - 2, 0, 100)
+          saveMood()
+          const hot = Math.random() < 0.5
+          publishFixed(hot ? '喂！再喂就撑爆了！主人是大笨蛋！' : '哼！人家要生气啦！不理你三分钟！',
+            'denied', hot ? 'angry-1.mp3' : 'angry-2.mp3', 'shake')
+        } else {
+          mood.mood = clamp(mood.mood - 1, 0, 100)
+          saveMood()
+          const shy = Math.random() < 0.5
+          publishFixed(shy ? '这顿真的吃不下了啦…主人再喂，人家要生气了哦。' : '哼，人家都说吃过了，主人是不是想灌我？',
+            'sweat', shy ? 'tsundere-1.mp3' : 'tsundere-2.mp3')
+        }
         return
       }
       meals[meal.id] = true
+      mood.feedAttempts = 0
       mood.fed += 1
-      mood.satiety = clamp(mood.satiety + 15, 0, 100)
-      mood.mood = clamp(mood.mood + 3, 0, 100)
+      mood.satiety = 100
+      mood.mood = clamp(mood.mood + 4, 0, 100)
       saveMood()
       const generous = Math.random() < 0.5
       publishFixed(generous ? '哇！小鱼干！谢谢主人～' : '香！主人最懂人家的口味了～', 'cheer', generous ? 'feed-1.mp3' : 'feed-2.mp3')
