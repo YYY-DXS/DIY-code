@@ -15,6 +15,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { synthesize } from './tools/edge-tts.mjs'
 import { hasAzure, synthesizeAzure } from './tools/azure-tts.mjs'
+import { hasMinimax, synthesizeMinimax } from './tools/minimax-tts.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const STATE_DIR = join(tmpdir(), 'dsh-whale-pet')
@@ -146,7 +147,7 @@ export function apply(ctx) {
       effect,
     }
     writeState()
-    if (!hasAzure()) return
+    if (!hasMinimax() && !hasAzure()) return
     void speakable(line, style).then((generated) => {
       if (stopped || generated === undefined || script.line !== line) return
       script = { ...script, voice: generated }
@@ -154,14 +155,20 @@ export function apply(ctx) {
     })
   }
 
-  /** Map a pose to the closest Azure emotion style. */
-  const styleForExpression = (expression) => {
-    if (expression === 'cheer') return 'cheerful'
+  /** Map a pose to a neutral emotion; each backend translates it. */
+  const emotionForExpression = (expression) => {
+    if (expression === 'cheer') return 'happy'
     if (expression === 'denied') return 'angry'
     if (expression === 'sweat') return 'affectionate'
     if (expression === 'tired') return 'gentle'
     if (expression === 'worried') return 'sad'
-    return 'chat'
+    return 'calm'
+  }
+
+  /** Azure style names for a neutral emotion. */
+  const azureStyleFor = (emotion) => {
+    if (emotion === 'happy') return 'cheerful'
+    return emotion
   }
 
   const saveMood = () => {
@@ -315,15 +322,29 @@ export function apply(ctx) {
    * @param {string} line - text to speak.
    * @returns {Promise<string | undefined>} absolute mp3 path.
    */
-  const speakable = async (line, style = '') => {
+  const speakable = async (line, emotion = 'calm') => {
     const python = ttsPython()
-    const digest = createHash('sha1').update(`${TTS_VOICE}:${AZURE_VOICE}:${style}:${line}`).digest('hex').slice(0, 16)
+    const digest = createHash('sha1').update(`${TTS_VOICE}:${AZURE_VOICE}:${emotion}:${line}`).digest('hex').slice(0, 16)
     const out = join(VOICE_CACHE, `${digest}.mp3`)
     if (existsSync(out)) return out
-    // Azure first when configured: it carries real emotion styles.
+    // Best backend first: MiniMax carries the most expressive emotion.
+    if (hasMinimax()) {
+      try {
+        if (await synthesizeMinimax({ text: line, out, emotion })) {
+          hostLog('tts via minimax')
+          return out
+        }
+      } catch (error) {
+        hostLog(`minimax tts failed: ${error && error.message ? error.message : String(error)}`)
+      }
+    }
+    // Azure next when configured: real emotion styles on the free tier.
     if (hasAzure()) {
       try {
-        if (await synthesizeAzure({ text: line, out, voice: AZURE_VOICE, style })) return out
+        if (await synthesizeAzure({ text: line, out, voice: AZURE_VOICE, style: azureStyleFor(emotion) })) {
+          hostLog('tts via azure')
+          return out
+        }
       } catch (error) {
         hostLog(`azure tts failed: ${error && error.message ? error.message : String(error)}`)
       }
@@ -384,7 +405,7 @@ export function apply(ctx) {
       }
       writeState()
       hostLog(`line(${kind}) ${reply.line} [${reply.expression}]`)
-      const voice = await speakable(reply.line, styleForExpression(reply.expression))
+      const voice = await speakable(reply.line, emotionForExpression(reply.expression))
       if (!stopped && voice !== undefined) {
         script = { ...script, voice }
         writeState()
@@ -443,7 +464,7 @@ export function apply(ctx) {
       mood.mood = clamp(mood.mood + 4, 0, 100)
       saveMood()
       const generous = Math.random() < 0.5
-      publishFixed(generous ? '哇！小鱼干！谢谢主人～' : '香！主人最懂人家的口味了～', 'cheer', generous ? 'feed-1.mp3' : 'feed-2.mp3', '', 'cheerful')
+      publishFixed(generous ? '哇！小鱼干！谢谢主人～' : '香！主人最懂人家的口味了～', 'cheer', generous ? 'feed-1.mp3' : 'feed-2.mp3', '', 'happy')
       return
     }
     if (kind === 'talk' || kind === 'mood' || kind === 'chatter') {

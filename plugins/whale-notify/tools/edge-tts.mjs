@@ -61,7 +61,7 @@ function clientFrame(opcode, payload) {
  * @param {number} [options.timeoutMs] - overall budget.
  * @returns {Promise<boolean>} whether the file was written.
  */
-export function synthesize({ text, out, voice = 'zh-CN-XiaoyiNeural', rate = '-4%', pitch = '+4Hz', timeoutMs = 15000 }) {
+export function synthesize({ text, out, voice = 'zh-CN-XiaoyiNeural', rate = '-4%', pitch = '+4Hz', style = '', styleDegree = 1, timeoutMs = 15000 }) {
   return new Promise((resolve) => {
     const requestId = randomUUID().replace(/-/g, '')
     const audio = []
@@ -135,7 +135,9 @@ export function synthesize({ text, out, voice = 'zh-CN-XiaoyiNeural', rate = '-4
         })}`, 'utf8')))
       socket.write(clientFrame(0x1, Buffer.from(
         `X-RequestId:${requestId}\r\nContent-Type:application/ssml+xml\r\nX-Timestamp:${new Date().toISOString()}Z\r\nPath:ssml\r\n\r\n`
-        + `<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='zh-CN'><voice name='${voice}'><prosody rate='${rate}' pitch='${pitch}'>${escapeXml(text)}</prosody></voice></speak>`, 'utf8')))
+        + (style === ''
+          ? `<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='zh-CN'><voice name='${voice}'><prosody rate='${rate}' pitch='${pitch}'>${escapeXml(text)}</prosody></voice></speak>`
+          : `<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xmlns:mstts='https://www.w3.org/2001/mstts' xml:lang='zh-CN'><voice name='${voice}'><mstts:express-as style='${style}' styledegree='${styleDegree}'><prosody rate='${rate}' pitch='${pitch}'>${escapeXml(text)}</prosody></mstts:express-as></voice></speak>`), 'utf8')))
 
       let pending = Buffer.alloc(0)
       socket.on('data', (chunk) => {
@@ -160,7 +162,7 @@ export function synthesize({ text, out, voice = 'zh-CN-XiaoyiNeural', rate = '-4
           if (opcode === 0x2) {
             if (payload.length > 2) audio.push(Buffer.from(payload.subarray(2 + payload.readUInt16BE(0))))
           } else if (opcode === 0x1) {
-            if (process.env.WHALE_TTS_DEBUG && payload.length < 400) debug(`text frame ${payload.length}`)
+            if (process.env.WHALE_TTS_DEBUG && payload.length < 600) debug(`text frame: ${payload.toString('utf8').replace(/\r/g, '|').slice(0, 400)}`)
             if (payload.includes('Path:turn.end')) {
               finish(true)
               return
