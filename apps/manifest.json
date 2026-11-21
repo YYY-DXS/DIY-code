@@ -263,7 +263,7 @@
     "plugins/whale-notify/client.js": "aa175ad8bee3bde1413ee74ec181821ad984a0e5d6ba986a9676adbdf06b4432",
     "plugins/whale-notify/cordis.patch.yml": "8e864e4b2988efd2ef983f9610e44c16f42ccd5ef74ea44e690d7b5d17cf3e82",
     "plugins/whale-notify/icon.png": "f130492964e6383caae370f5857b9003450a0c45edeee118d5f436d8445d39f8",
-    "plugins/whale-notify/index.js": "53c527699de7049fedbb2e77dfffa27647ac82b60c544dcff5c4654314b0f4c4",
+    "plugins/whale-notify/index.js": "79be87599039b3959ba14a441121f432f1c74a0f33493f01203e75d21963f3a5",
     "plugins/whale-notify/locale/en.json": "0e78f8886004bd7da141129e3e03c80198dcbe4f4ca11524e8250cc986e4019d",
     "plugins/whale-notify/locale/zh.json": "5716b36541b5d25c5b1588cc244e843799a70ba59edc8f1d510e1df7fe558933",
     "plugins/whale-notify/package.json": "87d80c5f8a25070a0ed69f86bc40f8a191cc7844fec48b188a9af39770263ea3",
