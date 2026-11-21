@@ -10,17 +10,33 @@
 #   ./publish-plugin.ps1 -Name query-bridge -RepoName dsh-query-bridge -Push
 #       生成后 git init + commit，并推送到 github:YYY-DXS/<RepoName>（仓库需先存在）
 param(
-    [Parameter(Mandatory = $true)][string]$Name,
-    [Parameter(Mandatory = $true)][string]$RepoName,
+    [string]$Name,
+    [string]$RepoName,
     [string]$Owner = "YYY-DXS",
     [string]$OutRoot = "",
     [switch]$Push,
+    # 一次重建并推送 plugins/repos.json 里的全部插件仓库
+    [switch]$All,
     [string]$Version = "0.1.0"
 )
 
 $ErrorActionPreference = "Stop"
 $repo = Split-Path -Parent $PSScriptRoot
 $src = Join-Path $repo "plugins\$Name"
+if ($All) {
+    $mapPath = Join-Path $repo 'plugins\repos.json'
+    if (-not (Test-Path $mapPath)) { throw "找不到 $mapPath（插件名 → 仓库名的映射表）" }
+    $map = Get-Content $mapPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    foreach ($prop in $map.PSObject.Properties) {
+        Write-Host "===== $($prop.Name) -> $($prop.Value) =====" -ForegroundColor Cyan
+        & $PSCommandPath -Name $prop.Name -RepoName $prop.Value -Owner $Owner -Version $Version -Push
+        if (-not $?) { throw "发布失败：$($prop.Name)" }
+    }
+    return
+}
+if ([string]::IsNullOrWhiteSpace($Name) -or [string]::IsNullOrWhiteSpace($RepoName)) {
+    throw "需要 -Name 和 -RepoName，或者用 -All 批量发布"
+}
 if (-not (Test-Path $src)) { throw "找不到插件目录：$src" }
 if ([string]::IsNullOrWhiteSpace($OutRoot)) { $OutRoot = Join-Path (Split-Path -Parent $repo) "_staging" }
 

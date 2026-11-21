@@ -12,6 +12,27 @@
 | `codex-history-bridge/` | `@local/codex-history-bridge` | 把本机 Codex 历史导入工作区（Markdown + 索引 + 可选原始 JSONL） |
 | `whale-notify/` | `@local/whale-notify` | 任务完成或有待你回复的问题时，播放提示音并弹出鲸鱼卡片 |
 
+## 已发布仓库
+
+每个插件同时以独立仓库发布，可以直接 `dsh plugin add` 安装（包名与 `cordis.patch.yml` 里的行名一致）：
+
+| 插件 | 仓库 | 安装命令 |
+| --- | --- | --- |
+| `query-bridge` | [dsh-query-bridge](https://github.com/YYY-DXS/dsh-query-bridge) | `dsh plugin add github:YYY-DXS/dsh-query-bridge` |
+| `deepseek-hub` | [dsh-deepseek-hub](https://github.com/YYY-DXS/dsh-deepseek-hub) | `dsh plugin add github:YYY-DXS/dsh-deepseek-hub` |
+| `media-studio` | [dsh-media-studio](https://github.com/YYY-DXS/dsh-media-studio) | `dsh plugin add github:YYY-DXS/dsh-media-studio` |
+| `codex-history-bridge` | [dsh-codex-history-bridge](https://github.com/YYY-DXS/dsh-codex-history-bridge) | `dsh plugin add github:YYY-DXS/dsh-codex-history-bridge` |
+| `whale-notify` | [dsh-whale-notify](https://github.com/YYY-DXS/dsh-whale-notify) | `dsh plugin add github:YYY-DXS/dsh-whale-notify` |
+
+**本仓库是唯一源码，独立仓库是发布镜像。** 改完插件后在仓库根目录执行：
+
+```powershell
+./tools/publish-plugin.ps1 -All                                                  # 按 plugins/repos.json 重建并强推全部
+./tools/publish-plugin.ps1 -Name query-bridge -RepoName dsh-query-bridge -Push    # 只发布一个
+```
+
+新增插件时，同步维护 `plugins/repos.json` 和上面的表格。
+
 ## 安装
 
 把插件目录放到 DSH profile 的插件目录，或在 DSH 插件管理器里从本地目录安装，然后重启

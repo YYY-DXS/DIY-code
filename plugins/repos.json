@@ -1,0 +1,7 @@
+{
+  "query-bridge": "dsh-query-bridge",
+  "deepseek-hub": "dsh-deepseek-hub",
+  "media-studio": "dsh-media-studio",
+  "codex-history-bridge": "dsh-codex-history-bridge",
+  "whale-notify": "dsh-whale-notify"
+}
