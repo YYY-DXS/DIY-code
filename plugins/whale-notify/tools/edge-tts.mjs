@@ -1,40 +1,26 @@
 /**
- * Minimal Edge neural-TTS client for the Host process.
+ * Edge neural-TTS client for the Host process.
  *
- * Node's WHATWG WebSocket cannot send the Origin/User-Agent headers this service
- * expects, so this module performs the upgrade by hand over `https.request`, then
- * speaks the WebSocket framing itself (client frames masked, server frames not).
- * The voice, rate and pitch match the pre-generated clips.
+ * Constraints that shaped it:
+ *  1. the plugin's spawned children have no network, so synthesis runs inside
+ *     the Host process;
+ *  2. the handshake carries a `Sec-MS-GEC` v2 token — see `drm.mjs`.
  */
-import { createHash, randomBytes, randomUUID } from 'node:crypto'
+import { randomBytes, randomUUID } from 'node:crypto'
 import { writeFileSync } from 'node:fs'
 import { request as httpsRequest } from 'node:https'
+import { secMsGecV2 } from './drm.mjs'
 
 const TRUSTED_TOKEN = '6A5AA1D4EAFF4E9FB37E23D68491D6F4'
 const HOST = 'speech.platform.bing.com'
-const WIN_EPOCH_SECONDS = 11644473600n
-const GEC_VERSION = '1-130.0.2849.68'
+const CHROMIUM = '143.0.3650.75'
+const CHROMIUM_MAJOR = '143'
+const GEC_VERSION = `2-${CHROMIUM}`
 
-/**
- * Edge now signs each handshake with a five-minute time window token.
- * @returns {string} the uppercase SHA-256 `Sec-MS-GEC` value.
- */
-function secMsGec() {
-  let ticks = (BigInt(Math.floor(Date.now() / 1000)) + WIN_EPOCH_SECONDS) * 10000000n
-  ticks -= ticks % 3000000000n
-  return createHash('sha256').update(`${ticks}${TRUSTED_TOKEN}`, 'ascii').digest('hex').toUpperCase()
-}
-
-const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36 Edg/130.0.0.0'
-
-/**
- * Escape text for the SSML body.
- * @param {string} value - raw text.
- * @returns {string} escaped text.
- */
-function escapeXml(value) {
-  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;')
-}
+/** Escape text for the SSML body. */
+const escapeXml = (value) => value
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;').replace(/'/g, '&apos;')
 
 /**
  * Build one masked client frame.
@@ -78,10 +64,12 @@ function clientFrame(opcode, payload) {
 export function synthesize({ text, out, voice = 'zh-CN-XiaoyiNeural', rate = '-4%', pitch = '+4Hz', timeoutMs = 15000 }) {
   return new Promise((resolve) => {
     const requestId = randomUUID().replace(/-/g, '')
-    const connectionId = randomUUID().replace(/-/g, '')
     const audio = []
     let settled = false
-    const finish = (socket, ok) => {
+    let socket
+    const debug = (message) => { if (process.env.WHALE_TTS_DEBUG) console.log('[tts]', message) }
+    const finish = (ok) => {
+      debug(`finish ok=${ok} audio=${audio.length}`)
       if (settled) return
       settled = true
       clearTimeout(timer)
@@ -102,12 +90,13 @@ export function synthesize({ text, out, voice = 'zh-CN-XiaoyiNeural', rate = '-4
       }
       resolve(false)
     }
-    const timer = setTimeout(() => finish(socketRef.current, false), timeoutMs)
-    const socketRef = { current: undefined }
+    const timer = setTimeout(() => finish(false), timeoutMs)
 
     const req = httpsRequest({
       host: HOST,
-      path: `/consumer/speech/synthesize/readaloud/edge/v1?TrustedClientToken=${TRUSTED_TOKEN}&Sec-MS-GEC=${secMsGec()}&Sec-MS-GEC-Version=${GEC_VERSION}&ConnectionId=${connectionId}`,
+      path: `/consumer/speech/synthesize/readaloud/edge/v1?TrustedClientToken=${TRUSTED_TOKEN}`
+        + `&Sec-MS-GEC=${secMsGecV2(Math.floor(Date.now() / 1000), TRUSTED_TOKEN)}`
+        + `&Sec-MS-GEC-Version=${GEC_VERSION}`,
       method: 'GET',
       headers: {
         Connection: 'Upgrade',
@@ -115,28 +104,38 @@ export function synthesize({ text, out, voice = 'zh-CN-XiaoyiNeural', rate = '-4
         'Sec-WebSocket-Key': randomBytes(16).toString('base64'),
         'Sec-WebSocket-Version': '13',
         Origin: 'chrome-extension://jdiccldimpdaibmpdkjnbmckianbfold',
-        'User-Agent': USER_AGENT,
         Pragma: 'no-cache',
         'Cache-Control': 'no-cache',
-        'Accept-Language': 'zh-CN,zh;q=0.9',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'User-Agent': `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${CHROMIUM_MAJOR}.0.0.0 Safari/537.36 Edg/${CHROMIUM_MAJOR}.0.0.0`,
+        'Sec-CH-UA': `" Not;A Brand";v="99", "Microsoft Edge";v="${CHROMIUM_MAJOR}", "Chromium";v="${CHROMIUM_MAJOR}"`,
+        'Sec-CH-UA-Mobile': '?0',
+        Cookie: `muid=${randomBytes(16).toString('hex').toUpperCase()};`,
       },
       timeout: timeoutMs,
     })
 
-    req.on('error', () => finish(socketRef.current, false))
-    req.on('timeout', () => finish(socketRef.current, false))
-    req.on('upgrade', (_response, socket) => {
-      socketRef.current = socket
+    req.on('error', () => finish(false))
+    req.on('timeout', () => finish(false))
+    req.on('response', (response) => {
+      debug(`response ${response.statusCode}`)
+      response.resume()
+      finish(false)
+    })
+    req.on('upgrade', (_response, upgraded) => {
+      debug('upgrade')
+      socket = upgraded
       socket.setNoDelay(true)
-      socket.on('error', () => finish(socket, false))
-      socket.on('close', () => finish(socket, audio.length > 0))
+      socket.on('error', () => finish(false))
+      socket.on('close', () => finish(audio.length > 0))
 
-      const config = 'Content-Type:application/json; charset=utf-8\r\nPath:speech.config\r\n\r\n'
-        + JSON.stringify({ context: { synthesis: { audio: { metadataoptions: { sentenceBoundaryEnabled: false, wordBoundaryEnabled: false }, outputFormat: 'audio-24khz-48kbitrate-mono-mp3' } } } })
-      socket.write(clientFrame(0x1, Buffer.from(config, 'utf8')))
-      const ssml = `X-RequestId:${requestId}\r\nContent-Type:application/ssml+xml\r\nX-Timestamp:${new Date().toISOString()}Z\r\nPath:ssml\r\n\r\n`
-        + `<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='zh-CN'><voice name='${voice}'><prosody rate='${rate}' pitch='${pitch}'>${escapeXml(text)}</prosody></voice></speak>`
-      socket.write(clientFrame(0x1, Buffer.from(ssml, 'utf8')))
+      socket.write(clientFrame(0x1, Buffer.from(
+        `Content-Type:application/json; charset=utf-8\r\nPath:speech.config\r\n\r\n${JSON.stringify({
+          context: { synthesis: { audio: { metadataoptions: { sentenceBoundaryEnabled: false, wordBoundaryEnabled: false }, outputFormat: 'audio-24khz-48kbitrate-mono-mp3' } } },
+        })}`, 'utf8')))
+      socket.write(clientFrame(0x1, Buffer.from(
+        `X-RequestId:${requestId}\r\nContent-Type:application/ssml+xml\r\nX-Timestamp:${new Date().toISOString()}Z\r\nPath:ssml\r\n\r\n`
+        + `<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='zh-CN'><voice name='${voice}'><prosody rate='${rate}' pitch='${pitch}'>${escapeXml(text)}</prosody></voice></speak>`, 'utf8')))
 
       let pending = Buffer.alloc(0)
       socket.on('data', (chunk) => {
@@ -161,12 +160,13 @@ export function synthesize({ text, out, voice = 'zh-CN-XiaoyiNeural', rate = '-4
           if (opcode === 0x2) {
             if (payload.length > 2) audio.push(Buffer.from(payload.subarray(2 + payload.readUInt16BE(0))))
           } else if (opcode === 0x1) {
+            if (process.env.WHALE_TTS_DEBUG && payload.length < 400) debug(`text frame ${payload.length}`)
             if (payload.includes('Path:turn.end')) {
-              finish(socket, true)
+              finish(true)
               return
             }
           } else if (opcode === 0x8) {
-            finish(socket, audio.length > 0)
+            finish(audio.length > 0)
             return
           } else if (opcode === 0x9) {
             socket.write(clientFrame(0xa, payload))

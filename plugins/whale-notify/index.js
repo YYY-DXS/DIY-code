@@ -13,6 +13,7 @@ import { appendFileSync, existsSync, mkdirSync, readFileSync, unlinkSync, writeF
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { synthesize } from './tools/edge-tts.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const STATE_DIR = join(tmpdir(), 'dsh-whale-pet')
@@ -236,11 +237,17 @@ export function apply(ctx) {
    */
   const speakable = async (line) => {
     const python = ttsPython()
-    if (python === undefined || !existsSync(TTS_SCRIPT)) return undefined
     const digest = createHash('sha1').update(`${TTS_VOICE}:${line}`).digest('hex').slice(0, 16)
     const out = join(VOICE_CACHE, `${digest}.mp3`)
     if (existsSync(out)) return out
+    // In-process first: spawned children have no network in this environment.
+    try {
+      if (await synthesize({ text: line, out, voice: TTS_VOICE })) return out
+    } catch (error) {
+      hostLog(`in-process tts failed: ${error && error.message ? error.message : String(error)}`)
+    }
     const run = async () => {
+      if (python === undefined || !existsSync(TTS_SCRIPT)) return undefined
       try {
         const service = ctx.get('subprocess')
         if (service === undefined) return undefined

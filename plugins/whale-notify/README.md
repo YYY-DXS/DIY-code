@@ -110,6 +110,16 @@ Right-click the character for a small menu (说一句 / 喂鱼干 / 看看心情
 退出); the tray menu carries the same actions. Single-click pats her, double-click
 asks for a spoken line.
 
+### Generated speech
+
+Lines the model writes are spoken too. The Host synthesises them **in-process**
+(`tools/edge-tts.mjs`): the plugin's spawned children have no network in this
+environment, so the request runs inside the Host over the Edge read-aloud
+WebSocket, signed with the `Sec-MS-GEC` v2 token (`tools/drm.mjs`, a faithful JS
+port of the community reference `edge_tts/drm.py`; see rany2/edge-tts issue #290).
+Audio is cached by text hash in `%TEMP%\\dsh-whale-pet\\voice-cache`, so a repeated
+line plays instantly. The first synthesis of a line takes about a second.
+
 ## How it knows
 
 The Web client already keeps one status snapshot per Session for the sidebar:
