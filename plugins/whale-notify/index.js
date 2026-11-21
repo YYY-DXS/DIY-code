@@ -59,9 +59,9 @@ function clamp(value, low, high) {
 
 /** Meal windows in local minutes: she only eats inside one of them. */
 const MEALS = [
-  { id: 'breakfast', label: '早饭', start: 7 * 60, end: 9 * 60 },
-  { id: 'lunch', label: '午饭', start: 11 * 60 + 30, end: 13 * 60 + 30 },
-  { id: 'dinner', label: '晚饭', start: 17 * 60 + 30, end: 19 * 60 + 30 },
+  { id: 'breakfast', label: '早饭', start: 6 * 60, end: 10 * 60 + 30 },
+  { id: 'lunch', label: '午饭', start: 10 * 60 + 30, end: 16 * 60 },
+  { id: 'dinner', label: '晚饭', start: 16 * 60, end: 22 * 60 },
 ]
 
 /** Local calendar day key used to reset the meal table. */
