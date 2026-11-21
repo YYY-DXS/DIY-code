@@ -182,6 +182,14 @@ function Bounce {
   }
 }
 
+function Shake {
+  Log 'shake'
+  $anim = New-Object System.Windows.Media.Animation.DoubleAnimation(0.0, 6.0, [TimeSpan]::FromMilliseconds(55))
+  $anim.AutoReverse = $true
+  $anim.RepeatBehavior = New-Object System.Windows.Media.Animation.RepeatBehavior(3)
+  $float.BeginAnimation([System.Windows.Media.TranslateTransform]::XProperty, $anim)
+}
+
 function SayTalk {
   Bounce
   Speak (Pick-Voice @('talk-1.mp3', 'talk-2.mp3', 'talk-3.mp3', 'talk-4.mp3', 'talk-5.mp3'))
@@ -396,6 +404,7 @@ function Poll-State {
         $script:expression = [string]$state.expression
         $script:expressionUntil = (Get-Date).AddSeconds(8)
         Refresh-Pose
+        if ([string]$state.effect -eq 'shake') { Shake }
       }
     }
     if ($state.voice -and [string]$state.voice -ne $script:lastVoice) {
