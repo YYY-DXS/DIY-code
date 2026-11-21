@@ -14,6 +14,7 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { synthesize } from './tools/edge-tts.mjs'
+import { hasAzure, synthesizeAzure } from './tools/azure-tts.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const STATE_DIR = join(tmpdir(), 'dsh-whale-pet')
@@ -29,6 +30,7 @@ const MIN_LINE_GAP_MS = 20000
 
 /** The voice the persona uses for generated lines. */
 const TTS_VOICE = 'zh-CN-XiaoyiNeural'
+const AZURE_VOICE = 'zh-CN-XiaoxiaoNeural'
 
 /** System prompt: persona plus the strict reply contract. */
 const PERSONA = [
@@ -134,7 +136,7 @@ export function apply(ctx) {
   }
 
   /** Publish a fixed line with one of the pre-generated voices. */
-  const publishFixed = (line, expression, voiceFile, effect = '') => {
+  const publishFixed = (line, expression, voiceFile, effect = '', style = '') => {
     sequence += 1
     script = {
       line,
@@ -144,6 +146,22 @@ export function apply(ctx) {
       effect,
     }
     writeState()
+    if (!hasAzure()) return
+    void speakable(line, style).then((generated) => {
+      if (stopped || generated === undefined || script.line !== line) return
+      script = { ...script, voice: generated }
+      writeState()
+    })
+  }
+
+  /** Map a pose to the closest Azure emotion style. */
+  const styleForExpression = (expression) => {
+    if (expression === 'cheer') return 'cheerful'
+    if (expression === 'denied') return 'angry'
+    if (expression === 'sweat') return 'affectionate'
+    if (expression === 'tired') return 'gentle'
+    if (expression === 'worried') return 'sad'
+    return 'chat'
   }
 
   const saveMood = () => {
@@ -297,12 +315,20 @@ export function apply(ctx) {
    * @param {string} line - text to speak.
    * @returns {Promise<string | undefined>} absolute mp3 path.
    */
-  const speakable = async (line) => {
+  const speakable = async (line, style = '') => {
     const python = ttsPython()
-    const digest = createHash('sha1').update(`${TTS_VOICE}:${line}`).digest('hex').slice(0, 16)
+    const digest = createHash('sha1').update(`${TTS_VOICE}:${AZURE_VOICE}:${style}:${line}`).digest('hex').slice(0, 16)
     const out = join(VOICE_CACHE, `${digest}.mp3`)
     if (existsSync(out)) return out
-    // In-process first: spawned children have no network in this environment.
+    // Azure first when configured: it carries real emotion styles.
+    if (hasAzure()) {
+      try {
+        if (await synthesizeAzure({ text: line, out, voice: AZURE_VOICE, style })) return out
+      } catch (error) {
+        hostLog(`azure tts failed: ${error && error.message ? error.message : String(error)}`)
+      }
+    }
+    // In-process Edge next: spawned children have no network in this environment.
     try {
       if (await synthesize({ text: line, out, voice: TTS_VOICE })) return out
     } catch (error) {
@@ -358,7 +384,7 @@ export function apply(ctx) {
       }
       writeState()
       hostLog(`line(${kind}) ${reply.line} [${reply.expression}]`)
-      const voice = await speakable(reply.line)
+      const voice = await speakable(reply.line, styleForExpression(reply.expression))
       if (!stopped && voice !== undefined) {
         script = { ...script, voice }
         writeState()
@@ -384,7 +410,7 @@ export function apply(ctx) {
     if (kind === 'feed') {
       const meal = currentMeal()
       if (meal === undefined) {
-        publishFixed('还没到饭点呢…主人先忙，人家不饿～', 'denied', 'meal-refuse.mp3')
+        publishFixed('还没到饭点呢…主人先忙，人家不饿～', 'denied', 'meal-refuse.mp3', '', 'calm')
         return
       }
       const meals = mealsToday()
@@ -400,13 +426,13 @@ export function apply(ctx) {
           saveMood()
           const hot = Math.random() < 0.5
           publishFixed(hot ? '喂！再喂就撑爆了！主人是大笨蛋！' : '哼！人家要生气啦！不理你三分钟！',
-            'denied', hot ? 'angry-1.mp3' : 'angry-2.mp3', 'shake')
+            'denied', hot ? 'angry-1.mp3' : 'angry-2.mp3', 'shake', 'angry')
         } else {
           mood.mood = clamp(mood.mood - 1, 0, 100)
           saveMood()
           const shy = Math.random() < 0.5
           publishFixed(shy ? '这顿真的吃不下了啦…主人再喂，人家要生气了哦。' : '哼，人家都说吃过了，主人是不是想灌我？',
-            'sweat', shy ? 'tsundere-1.mp3' : 'tsundere-2.mp3')
+            'sweat', shy ? 'tsundere-1.mp3' : 'tsundere-2.mp3', '', 'affectionate')
         }
         return
       }
@@ -417,7 +443,7 @@ export function apply(ctx) {
       mood.mood = clamp(mood.mood + 4, 0, 100)
       saveMood()
       const generous = Math.random() < 0.5
-      publishFixed(generous ? '哇！小鱼干！谢谢主人～' : '香！主人最懂人家的口味了～', 'cheer', generous ? 'feed-1.mp3' : 'feed-2.mp3')
+      publishFixed(generous ? '哇！小鱼干！谢谢主人～' : '香！主人最懂人家的口味了～', 'cheer', generous ? 'feed-1.mp3' : 'feed-2.mp3', '', 'cheerful')
       return
     }
     if (kind === 'talk' || kind === 'mood' || kind === 'chatter') {
