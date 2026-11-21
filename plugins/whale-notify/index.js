@@ -67,6 +67,8 @@ export function apply(ctx) {
   let mood = { ...DEFAULT_MOOD }
   let busy = false
   let lastRequestAt = 0
+  /** When the last inner monologue was requested. */
+  let lastThoughtAt = 0
 
   const hostLog = (message) => {
     try {
@@ -165,6 +167,7 @@ export function apply(ctx) {
       done: '任务刚刚完成，主人可能正等着看结果。',
       error: '刚才有一步出错了，主人可能有点急。',
       talk: '主人点了一下你，想听你说句话。',
+      thought: '你正在陪着主人干活，可以小声嘀咕一句你此刻的小心思。',
       mood: '主人想知道你现在的心情。',
       pat: '主人刚摸了你的头。',
       feed: '主人刚喂了你一条小鱼干。',
@@ -237,18 +240,24 @@ export function apply(ctx) {
     const digest = createHash('sha1').update(`${TTS_VOICE}:${line}`).digest('hex').slice(0, 16)
     const out = join(VOICE_CACHE, `${digest}.mp3`)
     if (existsSync(out)) return out
-    const synth = new Promise((resolve) => {
+    const run = async () => {
       try {
-        const proc = spawn(python, [TTS_SCRIPT, '--text', line, '--out', out, '--voice', TTS_VOICE], {
-          windowsHide: true,
-          stdio: 'ignore',
+        const service = ctx.get('subprocess')
+        if (service === undefined) return undefined
+        const handle = service.spawn({
+          argv: [python, TTS_SCRIPT, '--text', line, '--out', out, '--voice', TTS_VOICE],
+          cwd: HERE,
+          stdio: { stdin: 'ignore', stdout: { maxBytes: 4096 }, stderr: { maxBytes: 4096 } },
+          graceMs: 2000,
         })
-        proc.on('error', () => resolve(undefined))
-        proc.on('exit', (code) => resolve(code === 0 && existsSync(out) ? out : undefined))
+        await handle.done
+        return existsSync(out) ? out : undefined
       } catch (error) {
-        resolve(undefined)
+        hostLog(`tts failed: ${error && error.message ? error.message : String(error)}`)
+        return undefined
       }
-    })
+    }
+    const synth = run()
     // A stuck synthesizer must never block the next line.
     return await Promise.race([
       synth,
@@ -263,7 +272,7 @@ export function apply(ctx) {
   const generate = async (kind) => {
     if (stopped || busy) return
     const now = Date.now()
-    if (kind !== 'mood' && kind !== 'talk' && now - mood.lastLineAt < MIN_LINE_GAP_MS) return
+    if (kind !== 'mood' && kind !== 'talk' && kind !== 'thought' && now - mood.lastLineAt < MIN_LINE_GAP_MS) return
     busy = true
     try {
       const reply = await askModel(kind)
@@ -271,15 +280,16 @@ export function apply(ctx) {
       mood.lastLineAt = Date.now()
       saveMood()
       sequence += 1
-      // Publish the line and the voice path; the widget synthesises it itself.
+      // Synthesise first (bounded), then publish line and voice together.
+      const voice = await speakable(reply.line)
       script = {
         line: reply.line,
         expression: reply.expression,
-        voice: join(VOICE_CACHE, `${createHash('sha1').update(`${TTS_VOICE}:${reply.line}`).digest('hex').slice(0, 16)}.mp3`),
+        voice: voice ?? '',
         summary: `心情 ${mood.mood} · 好感 ${mood.affinity} · 饱食 ${mood.satiety}`,
       }
       writeState()
-      hostLog(`line(${kind}) ${reply.line} [${reply.expression}]`)
+      hostLog(`line(${kind}) ${reply.line} [${reply.expression}]${voice ? ' +voice' : ' (no voice)'}`)
     } finally {
       busy = false
     }
@@ -305,7 +315,7 @@ export function apply(ctx) {
       writeState()
       return
     }
-    if (kind === 'talk' || kind === 'mood') {
+    if (kind === 'talk' || kind === 'mood' || kind === 'thought') {
       lastRequestAt = Date.now()
       void generate(kind)
     }
@@ -380,6 +390,13 @@ export function apply(ctx) {
     }
     // Slow decay keeps the mood from freezing while nothing happens.
     if (mood.satiety > 0) mood.satiety = clamp(mood.satiety - 1, 0, 100)
+    if (phase === 'running') {
+      mood.mood = clamp(mood.mood + 1, 0, 100)
+      if (Date.now() - lastThoughtAt > 90000) {
+        lastThoughtAt = Date.now()
+        void generate('thought')
+      }
+    }
     writeState()
   }, 15000)
   if (typeof beat.unref === 'function') beat.unref()
