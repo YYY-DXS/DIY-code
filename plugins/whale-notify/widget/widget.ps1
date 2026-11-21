@@ -31,13 +31,14 @@ Log "start state=$StatePath assets=$AssetsDir"
 
 $script:phase = ''
 $script:armed = $false
+$script:muted = $false
 $script:left = 0
 $script:shutdownTimer = $null
 $script:lastStateAt = [datetime]::MinValue
 $script:statePhase = 'idle'
 $script:lastChange = Get-Date
 $script:player = New-Object System.Windows.Media.MediaPlayer
-$script:player.Volume = 0.35
+$script:player.Volume = 0.3
 $script:notify = $null
 
 function Read-Config {
@@ -46,7 +47,7 @@ function Read-Config {
 }
 
 function Save-Config {
-  $payload = @{ left = [int]$script:windowLeft; top = [int]$script:windowTop; armed = [bool]$script:armed } | ConvertTo-Json
+  $payload = @{ left = [int]$script:windowLeft; top = [int]$script:windowTop; armed = [bool]$script:armed; muted = [bool]$script:muted } | ConvertTo-Json
   try { Set-Content -LiteralPath $configPath -Value $payload -Encoding UTF8 -ErrorAction Stop } catch { }
 }
 
@@ -144,9 +145,11 @@ $tilt.BeginAnimation([System.Windows.Media.RotateTransform]::AngleProperty, $til
 
 function Speak([string]$name) {
   if (-not $name) { return }
+  if ($script:muted) { Log "muted, skip $name"; return }
   $path = Join-Path (Join-Path $AssetsDir 'voice') $name
   if (-not (Test-Path $path)) { return }
   try {
+    Log "speak $name"
     $script:player.Open((New-Object System.Uri $path))
     $script:player.Play()
   } catch { }
@@ -193,7 +196,9 @@ function Update-NotifyText([string]$next) {
   if ($script:notify -eq $null) { return }
   $label = $labels[$next]
   if ($label -eq $null) { $label = '空闲' }
-  try { $script:notify.Text = "鲸鱼娘 · $label" } catch { }
+  $suffix = ''
+  if ($script:muted) { $suffix = ' (muted)' }
+  try { $script:notify.Text = "鲸鱼娘 · $label$suffix" } catch { }
   if ($script:statusItem -ne $null) {
     try { $script:statusItem.Text = "状态：$label" } catch { }
   }
@@ -215,8 +220,15 @@ function Set-Phase([string]$next) {
   $script:lastChange = $now
   # 只有“好久不用、又开始干活”时才说话；其余状态切换保持安静
   if ($next -eq 'running' -and $idleMinutes -gt 30) {
-    Log ("resume after {0:N0} min idle -> speak" -f $idleMinutes)
+    Log ("resume after {0:N0} min idle -> greet" -f $idleMinutes)
     Speak (Pick-Voice @('welcome.mp3', 'chat-1.mp3', 'chat-2.mp3'))
+  } else {
+    switch ($next) {
+      'running' { Speak (Pick-Voice @('running-1.mp3', 'running-2.mp3')) }
+      'waiting' { Speak 'approval.mp3' }
+      'done' { Speak (Pick-Voice @('done-1.mp3', 'done-2.mp3')) }
+      'error' { Speak 'sad.mp3' }
+    }
   }
   if ($next -eq 'done' -and $script:armed) { Start-Countdown }
   if ($next -eq 'running') { Stop-Countdown }
@@ -263,6 +275,7 @@ if ($config -ne $null -and $config.left -ne $null -and $config.top -ne $null) {
 }
 $script:windowLeft = $window.Left
 $script:windowTop = $window.Top
+if ($config -ne $null -and $config.muted -eq $true) { $script:muted = $true }
 Log ("window at {0},{1}" -f $window.Left, $window.Top)
 
 # 托盘图标
@@ -275,6 +288,9 @@ try {
   $script:statusItem = New-Object System.Windows.Forms.ToolStripMenuItem '状态：空闲'
   $script:statusItem.Enabled = $false
   $showItem = New-Object System.Windows.Forms.ToolStripMenuItem '显示 / 隐藏'
+  $muteItem = New-Object System.Windows.Forms.ToolStripMenuItem '静音'
+  $muteItem.CheckOnClick = $true
+  $muteItem.Checked = $script:muted
   $armItem = New-Object System.Windows.Forms.ToolStripMenuItem '完成后关机'
   $armItem.CheckOnClick = $true
   $armItem.Checked = $script:armed
@@ -283,12 +299,18 @@ try {
   [void]$menu.Items.Add($script:statusItem)
   [void]$menu.Items.Add((New-Object System.Windows.Forms.ToolStripSeparator))
   [void]$menu.Items.Add($showItem)
+  [void]$menu.Items.Add($muteItem)
   [void]$menu.Items.Add($armItem)
   [void]$menu.Items.Add($cancelItem)
   [void]$menu.Items.Add((New-Object System.Windows.Forms.ToolStripSeparator))
   [void]$menu.Items.Add($quitItem)
   $script:notify.ContextMenuStrip = $menu
   $showItem.Add_Click({ if ($window.Visibility -eq 'Visible') { $window.Hide() } else { $window.Show() } })
+  $muteItem.Add_Click({
+    $script:muted = $muteItem.Checked
+    Save-Config
+    Update-NotifyText $script:phase
+  })
   $armItem.Add_Click({
     $script:armed = $armItem.Checked
     if (-not $script:armed) { Stop-Countdown }
