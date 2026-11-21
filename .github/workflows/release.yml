@@ -42,7 +42,7 @@ jobs:
           Get-ChildItem -Path $roots -Recurse -Include *.py -File |
             Where-Object { $_.FullName -notmatch '\\__pycache__\\' } |
             ForEach-Object {
-              python -c "import ast,sys; ast.parse(open(sys.argv[1], encoding='utf-8').read(), filename=sys.argv[1])" $_.FullName
+              python -c "import ast,sys; ast.parse(open(sys.argv[1], encoding='utf-8-sig').read(), filename=sys.argv[1])" $_.FullName
               if ($LASTEXITCODE -ne 0) { throw "Python 语法错误：$($_.FullName)" }
             }
 

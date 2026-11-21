@@ -42,7 +42,7 @@
     "apps/dsh-plugin-pulse/LICENSE": "5d657e580436c95af6749935149002a67a1216a96a0e1cd1124fc751114ed919",
     "apps/dsh-plugin-pulse/pulse_panel.py": "23259e5ef88a12d7cfe445bd040d8765197f5fbf799f83fe39d723c76231904c",
     "apps/dsh-plugin-pulse/README.md": "6e6411faf2361d72815bbcfd059a14e5494fca08680e4bf1215c9e67089a7150",
-    "apps/dsh-plugin-pulse/server.py": "534f0202fb1e13f492ee6d77f77ba2fc35955ededdcba2dc245dadf69104ff45",
+    "apps/dsh-plugin-pulse/server.py": "ba76adccfe583645b9b5be7ee53b2b8b910138fe6cc0aa1f22facafaba18b9fb",
     "apps/dsh-plugin-pulse/start.ps1": "3319c0383acb7435d9d33cc9cec9864a23543803d35110cf547141bf2f995426",
     "apps/dsh-plugin-pulse/start-pulse.ps1": "74daa1f75fdc9304e7b2252124872f8fdb91e81974c5571e046488967dcfb811",
     "apps/dsh-plugin-pulse/translate.py": "63d744dc62bf5e8861c6f4ebff2fcaa2c8cfba5222d4cb2e59fbe120e42fcc46",

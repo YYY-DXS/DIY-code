@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """DSH 插件安装面板（图形化）—— 本地 HTTP 服务，只监听 127.0.0.1。
 
