@@ -1725,10 +1725,10 @@ class CardApp:
     def _card_gap(self) -> int:
         return max(4, int(round(CARD_GAP * self.scale)))
 
-    def _overlaps_at(self, card: CardWindow, x: int, y: int) -> bool:
+    def _overlaps_at(self, card: CardWindow, x: int, y: int, ignore=None) -> bool:
         gap = self._card_gap()
         for other in self.cards:
-            if other is card or not other.visible:
+            if other is card or other is ignore or not other.visible:
                 continue
             if (x < other.card_x + other.card_w + gap and
                     x + card.card_w + gap > other.card_x and
@@ -1736,6 +1736,20 @@ class CardApp:
                     y + card.card_h + gap > other.card_y):
                 return True
         return False
+
+    def _cards_at(self, card: CardWindow, x: int, y: int) -> list:
+        """目标位置压到了哪些卡（用于拖拽时的整卡互换）。"""
+        gap = self._card_gap()
+        hits = []
+        for other in self.cards:
+            if other is card or not other.visible:
+                continue
+            if (x < other.card_x + other.card_w + gap and
+                    x + card.card_w + gap > other.card_x and
+                    y < other.card_y + other.card_h + gap and
+                    y + card.card_h + gap > other.card_y):
+                hits.append(other)
+        return hits
 
     def _find_free_spot(self, card: CardWindow, x: int, y: int) -> tuple:
         """从给定位置向外按网格找最近的不重叠位置；找不到就退回原位。"""
@@ -1860,6 +1874,14 @@ class CardApp:
             return
         self._drag_feedback_last = now
         sx, sy, gx, gy = self.compute_snap(card)
+        # 预览要和松手后的结果一致：能互换就停在目标，不能就显示真正会落到的空位
+        targets = self._cards_at(card, sx, sy)
+        can_swap = (
+            len(targets) == 1 and
+            not self._overlaps_at(targets[0], card.card_x, card.card_y, ignore=card)
+        )
+        if not can_swap:
+            sx, sy = self._find_free_spot(card, sx, sy)
         self.pending_snap = (sx, sy)
         key = (card.card_w, card.card_h, round(card.scale, 3))
         cached = self._shadow_cache.get(key)
@@ -1893,7 +1915,20 @@ class CardApp:
         if self.drag_card is not card:
             return
         sx, sy, _, _ = self.compute_snap(card)
-        # 松手后不允许叠到别的卡上：吸到最近的空位
+        # 拖到别的卡上 = 和它换位置，而不是弹回原处；
+        # 这样「看得见的位置」就是「放得下的位置」。
+        targets = self._cards_at(card, sx, sy)
+        if len(targets) == 1:
+            other = targets[0]
+            old_x, old_y = card.card_x, card.card_y
+            if not self._overlaps_at(other, old_x, old_y, ignore=card):
+                card.set_card_pos(sx, sy)
+                other.set_card_pos(old_x, old_y)
+                self._hide_feedback()
+                self.drag_card = None
+                self.save_layout()
+                return
+        # 压在多张卡上或换位放不下：退回到最近的空位
         sx, sy = self._find_free_spot(card, sx, sy)
         card.set_card_pos(sx, sy)
         self._hide_feedback()
