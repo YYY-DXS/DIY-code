@@ -6,7 +6,7 @@
 | 目录 | 软件 | 说明 | 运行方式 |
 | --- | --- | --- | --- |
 | `pc-toolkit/` | 电脑管家 | 系统体检、环境修复、深度垃圾/隐私痕迹清理、文件整理 | 双击 `启动.bat` |
-| `desktop-widget/` | 桌面小组件 | 天气 / DeepSeek 余额 / CPU 内存悬浮窗 | 双击 `启动浮窗.bat` |
+| `desktop-widget/` | 桌面小组件 | 七张独立卡片：天气 / 余额 / 资源 / 音量 / 音乐 / 蓝牙电量 / 日历 | 双击 `启动.bat` |
 | `tech-pulse/` | 科技脉冲 | 每日科技新闻 + DIY 项目聚合推送 | 双击 `start.cmd` |
 | `codex-portable/` | Codex 环境搬运 | 把 Codex 工作环境打包搬到新电脑 | `codex-portable.cmd` |
 | `raw-to-jpg/` | RAW 转 JPG | 批量把 ARW 等 RAW 转成 JPG 的桌面工具 | `build.ps1` 编译后运行 |
@@ -16,7 +16,7 @@
 
 ## 依赖说明
 
-- `desktop-widget`：启动器会自动检测并安装 Pillow，不需要手动 `pip install`。
+- `desktop-widget`：启动器会自动检测并安装 Pillow 与 winrt 媒体依赖（见 `requirements.txt`），不需要手动 `pip install`。
 - `tech-pulse`：源码运行需要 Node.js 20+；打包 exe 需要先 `npm install`，再 `npm run build:exe`。
 - `raw-to-jpg`：使用 Windows 自带 .NET Framework 4.x 编译器，无需第三方运行库。
 - `dsh-plugin-pulse`：源码运行需要 Python 3 + Tkinter；也可以先 `build.ps1` 打包。

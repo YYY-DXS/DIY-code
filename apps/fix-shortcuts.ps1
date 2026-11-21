@@ -54,15 +54,15 @@ if ($techPulse) {
 }
 
 # 桌面小组件
-$widgetScript = Join-Path $repo 'apps\desktop-widget\launch-widget.ps1'
+$widgetScript = Join-Path $repo 'apps\desktop-widget\launch-cards.ps1'
 if (Test-Path -LiteralPath $widgetScript) {
   $widgetArgs = '-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "' + $widgetScript + '"'
   $widgetIcon = "$powershell,0"
   $widgetIconPath = Join-Path $repo 'apps\desktop-widget\assets\app.ico'
   if (Test-Path -LiteralPath $widgetIconPath) { $widgetIcon = "$widgetIconPath,0" }
-  Save-App '桌面小组件' $powershell $widgetArgs (Split-Path -Parent $widgetScript) $widgetIcon '天气 / DeepSeek 余额 / 系统资源浮窗'
+  Save-App '桌面小组件' $powershell $widgetArgs (Split-Path -Parent $widgetScript) $widgetIcon '天气 / DeepSeek 余额 / 系统资源卡片'
 } else {
-  Write-Warning '找不到 desktop-widget\launch-widget.ps1'
+  Write-Warning '找不到 desktop-widget\launch-cards.ps1'
 }
 
 # 电脑管家

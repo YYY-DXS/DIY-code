@@ -32,17 +32,17 @@ if (-not (Test-Path -LiteralPath $python)) {
   $python = $systemPython.Source
 }
 
-# Pillow 是这个浮窗唯一的第三方依赖：缺了就自动装，不让用户自己猜。
-& $python -c "import PIL" *> $null
+# Pillow 画界面，winrt 读 Windows 媒体会话；缺了就自动装，不让用户自己猜。
+& $python -c "import PIL, winrt.windows.media.control" *> $null
 if ($LASTEXITCODE -ne 0) {
-  Write-Host "首次运行：正在安装 Pillow 图像库（只需一次）..."
-  & $python -m pip install --user --disable-pip-version-check pillow
+  Write-Host "首次运行：正在安装 Pillow / winrt 依赖（只需一次）..."
+  & $python -m pip install --user --disable-pip-version-check -r (Join-Path $appRoot "requirements.txt")
   if ($LASTEXITCODE -ne 0) {
     Write-Host ""
-    Write-Host "Pillow 安装失败。请检查网络后重试，或手动运行："
-    Write-Host "  `"$python`" -m pip install pillow"
+    Write-Host "依赖安装失败。请检查网络后重试，或手动运行："
+    Write-Host "  `"$python`" -m pip install -r `"$appRoot\requirements.txt`""
     exit 1
   }
 }
 
-Start-Process -FilePath $pythonw -ArgumentList @("`"$appRoot\widget.py`"") -WorkingDirectory $appRoot
+Start-Process -FilePath $pythonw -ArgumentList @("`"$appRoot\cards.py`"") -WorkingDirectory $appRoot

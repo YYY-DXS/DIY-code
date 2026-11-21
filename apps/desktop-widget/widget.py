@@ -2721,10 +2721,15 @@ def main(argv) -> int:
 
 
 if __name__ == "__main__":
-    try:
-        sys.exit(main(sys.argv[1:]))
-    except SystemExit:
-        raise
-    except Exception:
-        log("[fatal] " + traceback.format_exc())
-        sys.exit(1)
+    # v0.2 起默认入口是 cards.py（多卡片、拖动吸附、对齐）。
+    # widget.py 保留为渲染/数据模块，只有 --preview / --probe 还允许直接运行。
+    if "--preview" in sys.argv or "--probe" in sys.argv:
+        try:
+            sys.exit(main(sys.argv[1:]))
+        except SystemExit:
+            raise
+        except Exception:
+            log("[fatal] " + traceback.format_exc())
+            sys.exit(1)
+    print("旧版整块浮窗入口已停用。请双击 启动.bat，或运行 python cards.py。")
+    sys.exit(0)

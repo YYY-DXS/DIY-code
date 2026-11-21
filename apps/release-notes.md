@@ -1,8 +1,20 @@
-# DIY 软件合集 v2.0.8
+# DIY 软件合集 v2.1.0
 
 本次发行把仓库里所有可独立分发的软件打成 15 个 zip：8 个 Windows 桌面工具、4 个 DSH
 宿主插件、1 个生成器、1 个工具集、1 个更新器。每个包解压即用（个别需要 Node / Python / DSH
 运行时，见各包 README）。
+
+## v2.1.0 更新
+
+- **桌面小组件重做成七张独立卡片**：天气、DeepSeek 余额、系统资源、音量混音器（`AudioBridge.exe`，WASAPI）、
+  音乐播放器（Windows GSMTC / `winrt`）、蓝牙电量、日历（ICS 订阅或本地 `.ics`）。
+  每张卡独立窗口、独立缩放（0.6×–2.2×）、拖动吸附 40px 网格、对齐参考线与落点阴影、锁定布局；
+  位置、缩放、显隐写进 `config.json` 的 `cards` 字段，重启恢复。
+- **启动方式**：新的 `启动.bat` → `launch-cards.ps1`，自动找 Python 并检查 Pillow / winrt 依赖；
+  旧的整块浮窗 `launch-widget.ps1`、`启动浮窗.bat` 移除，`widget.py` 保留 `--preview` 查看旧版外观。
+- **托盘 / 右键菜单**：添加组件、隐藏单卡、重置单卡大小、重置布局、锁定布局；
+  快捷键 `Ctrl+Alt+Shift+W` 重置、`Ctrl+Alt+Shift+Q` 退出。
+- `fix-shortcuts.ps1` 同步指向新启动器。
 
 ## v2.0.8 新增
 

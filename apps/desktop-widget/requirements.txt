@@ -1,1 +1,4 @@
-pillow>=10.0
+pillow
+winrt-Windows.Media.Control
+winrt-Windows.Foundation
+winrt-Windows.Foundation.Collections
