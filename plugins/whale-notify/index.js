@@ -41,7 +41,10 @@ const PERSONA = [
 ].join('\n')
 
 /** Mutable counters that make her feel alive. */
-const DEFAULT_MOOD = { mood: 62, affinity: 20, satiety: 45, fed: 0, patted: 0, lastLineAt: 0 }
+const DEFAULT_MOOD = {
+  mood: 62, affinity: 20, satiety: 45, fed: 0, patted: 0, lastLineAt: 0,
+  meals: { date: '', breakfast: false, lunch: false, dinner: false, asked: { breakfast: false, lunch: false, dinner: false } },
+}
 
 /**
  * Clamp a number into a range.
@@ -53,6 +56,32 @@ const DEFAULT_MOOD = { mood: 62, affinity: 20, satiety: 45, fed: 0, patted: 0, l
 function clamp(value, low, high) {
   return Math.max(low, Math.min(high, value))
 }
+
+/** Meal windows in local minutes: she only eats inside one of them. */
+const MEALS = [
+  { id: 'breakfast', label: '早饭', start: 7 * 60, end: 9 * 60 },
+  { id: 'lunch', label: '午饭', start: 11 * 60 + 30, end: 13 * 60 + 30 },
+  { id: 'dinner', label: '晚饭', start: 17 * 60 + 30, end: 19 * 60 + 30 },
+]
+
+/** Local calendar day key used to reset the meal table. */
+const dayKey = () => {
+  const now = new Date()
+  return `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`
+}
+
+/** The meal window that contains the current minute, if any. */
+const currentMeal = () => {
+  const now = new Date()
+  const minutes = now.getHours() * 60 + now.getMinutes()
+  return MEALS.find(meal => minutes >= meal.start && minutes < meal.end)
+}
+
+/** A fresh meal table for today. */
+const emptyMeals = () => ({
+  date: dayKey(), breakfast: false, lunch: false, dinner: false,
+  asked: { breakfast: false, lunch: false, dinner: false },
+})
 
 export function apply(ctx) {
   if (process.platform !== 'win32') return
@@ -68,8 +97,11 @@ export function apply(ctx) {
   let mood = { ...DEFAULT_MOOD }
   let busy = false
   let lastRequestAt = 0
-  /** When the last inner monologue was requested. */
-  let lastThoughtAt = 0
+  /** When the next half-hourly murmur is due. */
+  let chatterAt = Date.now() + 5 * 60000
+  /** Wall-clock gates so the mood drifts at a human pace. */
+  let moodTickAt = 0
+  let satietyTickAt = 0
 
   const hostLog = (message) => {
     try {
@@ -85,6 +117,32 @@ export function apply(ctx) {
     mood = { ...DEFAULT_MOOD, ...JSON.parse(readFileSync(MOOD_PATH, 'utf8')) }
   } catch (error) {
     // First run, or a corrupt file: defaults are fine.
+  }
+
+  const mealsToday = () => {
+    if (mood.meals === undefined || typeof mood.meals !== 'object' || mood.meals.date !== dayKey()) {
+      mood.meals = emptyMeals()
+    }
+    return mood.meals
+  }
+  mealsToday()
+
+  const mealSummary = () => {
+    const meals = mealsToday()
+    const mark = (id) => (meals[id] === true ? '✓' : '·')
+    return `今天三餐：早${mark('breakfast')} 午${mark('lunch')} 晚${mark('dinner')}`
+  }
+
+  /** Publish a fixed line with one of the pre-generated voices. */
+  const publishFixed = (line, expression, voiceFile) => {
+    sequence += 1
+    script = {
+      line,
+      expression,
+      voice: join(HERE, 'assets', 'voice', voiceFile),
+      summary: `心情 ${mood.mood} · 好感 ${mood.affinity} · 饱食 ${mood.satiety} · ${mealSummary()}`,
+    }
+    writeState()
   }
 
   const saveMood = () => {
@@ -168,6 +226,8 @@ export function apply(ctx) {
       done: '任务刚刚完成，主人可能正等着看结果。',
       error: '刚才有一步出错了，主人可能有点急。',
       talk: '主人点了一下你，想听你说句话。',
+      chatter: '主人正在忙，你在旁边小声嘟囔一句：可以撒娇、吐槽主人、或者傲娇一下，别太吵。',
+      hungry: `到了${(currentMeal() && currentMeal().label) || '饭点'}，你肚子饿了，可以小声跟主人讨口饭吃。`,
       thought: '你正在陪着主人干活，可以小声嘀咕一句你此刻的小心思。',
       mood: '主人想知道你现在的心情。',
       pat: '主人刚摸了你的头。',
@@ -279,7 +339,7 @@ export function apply(ctx) {
   const generate = async (kind) => {
     if (stopped || busy) return
     const now = Date.now()
-    if (kind !== 'mood' && kind !== 'talk' && kind !== 'thought' && now - mood.lastLineAt < MIN_LINE_GAP_MS) return
+    if (kind !== 'mood' && kind !== 'talk' && kind !== 'chatter' && now - mood.lastLineAt < MIN_LINE_GAP_MS) return
     busy = true
     try {
       const reply = await askModel(kind)
@@ -292,7 +352,7 @@ export function apply(ctx) {
         line: reply.line,
         expression: reply.expression,
         voice: '',
-        summary: `心情 ${mood.mood} · 好感 ${mood.affinity} · 饱食 ${mood.satiety}`,
+        summary: `心情 ${mood.mood} · 好感 ${mood.affinity} · 饱食 ${mood.satiety} · ${mealSummary()}`,
       }
       writeState()
       hostLog(`line(${kind}) ${reply.line} [${reply.expression}]`)
@@ -320,14 +380,26 @@ export function apply(ctx) {
       return
     }
     if (kind === 'feed') {
+      const meal = currentMeal()
+      if (meal === undefined) {
+        publishFixed('还没到饭点呢…主人先忙，人家不饿～', 'denied', 'meal-refuse.mp3')
+        return
+      }
+      const meals = mealsToday()
+      if (meals[meal.id] === true) {
+        publishFixed('这顿已经吃过啦，主人别把人家喂胖～', 'denied', 'meal-done.mp3')
+        return
+      }
+      meals[meal.id] = true
       mood.fed += 1
-      mood.satiety = clamp(mood.satiety + 10, 0, 100)
+      mood.satiety = clamp(mood.satiety + 15, 0, 100)
       mood.mood = clamp(mood.mood + 3, 0, 100)
       saveMood()
-      writeState()
+      const generous = Math.random() < 0.5
+      publishFixed(generous ? '哇！小鱼干！谢谢主人～' : '香！主人最懂人家的口味了～', 'cheer', generous ? 'feed-1.mp3' : 'feed-2.mp3')
       return
     }
-    if (kind === 'talk' || kind === 'mood' || kind === 'thought') {
+    if (kind === 'talk' || kind === 'mood' || kind === 'chatter') {
       lastRequestAt = Date.now()
       void generate(kind)
     }
@@ -423,14 +495,25 @@ export function apply(ctx) {
       waitingUntil = 0
       settle()
     }
-    // Slow decay keeps the mood from freezing while nothing happens.
-    if (mood.satiety > 0) mood.satiety = clamp(mood.satiety - 1, 0, 100)
-    if (phase === 'running') {
+    // Satiety drains about one point every five minutes, not every tick.
+    if (Date.now() - satietyTickAt > 5 * 60000) {
+      satietyTickAt = Date.now()
+      if (mood.satiety > 0) mood.satiety = clamp(mood.satiety - 1, 0, 100)
+    }
+    if (phase === 'running' && Date.now() - moodTickAt > 60000) {
+      moodTickAt = Date.now()
       mood.mood = clamp(mood.mood + 1, 0, 100)
-      if (Date.now() - lastThoughtAt > 90000) {
-        lastThoughtAt = Date.now()
-        void generate('thought')
-      }
+    }
+    const meals = mealsToday()
+    const meal = currentMeal()
+    if (meal !== undefined && meals[meal.id] !== true && meals.asked[meal.id] !== true) {
+      meals.asked[meal.id] = true
+      saveMood()
+      void generate('hungry')
+    }
+    if ((phase === 'running' || phase === 'idle') && Date.now() > chatterAt) {
+      chatterAt = Date.now() + (25 + Math.random() * 10) * 60000
+      void generate('chatter')
     }
     writeState()
   }, 15000)
